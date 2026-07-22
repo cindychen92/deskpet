@@ -1,5 +1,35 @@
 import Cocoa
 import QuartzCore
+import FirebaseAuth
+import FirebaseCore
+import FirebaseStorage
+
+enum FirebaseConfiguration {
+    private static var didConfigure = false
+
+    static var isConfigured: Bool {
+        didConfigure
+    }
+
+    @discardableResult
+    static func configureIfNeeded() -> Bool {
+        guard !didConfigure else { return true }
+        guard let configurationURL = Bundle.main.url(
+            forResource: "GoogleService-Info",
+            withExtension: "plist"
+        ) else {
+            NSLog("Firebase configuration is missing; remote pet resources are disabled.")
+            return false
+        }
+        guard let options = FirebaseOptions(contentsOfFile: configurationURL.path) else {
+            NSLog("Firebase configuration could not be read; remote pet resources are disabled.")
+            return false
+        }
+        FirebaseApp.configure(options: options)
+        didConfigure = true
+        return true
+    }
+}
 
 enum AnimationTiming {
     static let walkFramesPerSecond: CGFloat = 15
@@ -282,6 +312,7 @@ final class PetWindow: NSWindow {
 @main
 struct DogDesktopPetMain {
     static func main() {
+        FirebaseConfiguration.configureIfNeeded()
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
@@ -309,13 +340,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
     private var pauseRemaining: CGFloat = 0
     private var nextPauseRemaining: CGFloat = 0
     func applicationDidFinishLaunching(_ notification: Notification) {
+        configureFirebase()
         NSApp.setActivationPolicy(.accessory)
         createWindow()
+        authenticateAndLoadRemoteResources()
         stateMachine.onEnter = { [weak self] action in
             self?.handleEntered(action)
         }
         scheduleNextPause()
         startTimers()
+    }
+
+    private func configureFirebase() {
+        FirebaseConfiguration.configureIfNeeded()
+    }
+
+    private func authenticateAndLoadRemoteResources() {
+        guard FirebaseConfiguration.isConfigured else {
+            NSLog("Firebase is not configured; skipping remote pet resources.")
+            return
+        }
+
+        if Auth.auth().currentUser != nil {
+            petView.loadRemoteResources()
+            return
+        }
+
+        Auth.auth().signInAnonymously { [weak self] _, error in
+            if let error {
+                let nsError = error as NSError
+                NSLog(
+                    "Firebase anonymous sign-in failed: domain=\(nsError.domain) code=\(nsError.code) description=\(nsError.localizedDescription) userInfo=\(nsError.userInfo)"
+                )
+                DispatchQueue.main.async {
+                    self?.petView.say("云端资源暂时不可用。")
+                }
+                return
+            }
+            DispatchQueue.main.async {
+                self?.petView.loadRemoteResources()
+            }
+        }
     }
 
     private func createWindow() {
@@ -585,6 +650,83 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
     }
 }
 
+final class FirebasePetResourceLoader {
+    private let cacheDirectory: URL
+    private let remoteDirectory = "resources/simba"
+
+    init(fileManager: FileManager = .default) {
+        let cachesDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        cacheDirectory = cachesDirectory.appendingPathComponent("DeskPet/PetResources", isDirectory: true)
+        try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+    }
+
+    func loadImages(
+        named names: [String],
+        onImage: @escaping (String, NSImage) -> Void
+    ) {
+        for name in names {
+            loadCachedImage(named: name, onImage: onImage)
+            downloadImage(named: name, onImage: onImage)
+        }
+    }
+
+    private func loadCachedImage(named name: String, onImage: @escaping (String, NSImage) -> Void) {
+        let cacheURL = imageURL(for: name)
+        guard let image = NSImage(contentsOf: cacheURL) else { return }
+        deliver(image, named: name, onImage: onImage)
+    }
+
+    private func downloadImage(named name: String, onImage: @escaping (String, NSImage) -> Void) {
+        guard FirebaseConfiguration.isConfigured else {
+            NSLog("Firebase is not configured; skipping remote pet resource \(name).")
+            return
+        }
+
+        let cacheURL = imageURL(for: name)
+        let temporaryURL = cacheDirectory.appendingPathComponent("\(name).download.png")
+        try? FileManager.default.removeItem(at: temporaryURL)
+
+        Storage.storage()
+            .reference()
+            .child("\(remoteDirectory)/\(name).png")
+            .write(toFile: temporaryURL) { [weak self] url, error in
+                guard let self else { return }
+                guard error == nil, let url, let image = NSImage(contentsOf: url) else {
+                    if let error {
+                        NSLog("Unable to load remote pet resource \(name): \(error.localizedDescription)")
+                    }
+                    return
+                }
+
+                do {
+                    try self.replaceCachedImage(at: cacheURL, with: url)
+                } catch {
+                    NSLog("Unable to cache remote pet resource \(name): \(error.localizedDescription)")
+                }
+                self.deliver(image, named: name, onImage: onImage)
+            }
+    }
+
+    private func replaceCachedImage(at destinationURL: URL, with temporaryURL: URL) throws {
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: destinationURL.path) {
+            _ = try fileManager.replaceItemAt(destinationURL, withItemAt: temporaryURL)
+        } else {
+            try fileManager.moveItem(at: temporaryURL, to: destinationURL)
+        }
+    }
+
+    private func imageURL(for name: String) -> URL {
+        cacheDirectory.appendingPathComponent("\(name).png")
+    }
+
+    private func deliver(_ image: NSImage, named name: String, onImage: @escaping (String, NSImage) -> Void) {
+        DispatchQueue.main.async {
+            onImage(name, image)
+        }
+    }
+}
+
 final class PetView: NSView {
     weak var delegate: PetViewDelegate?
     var state: PetState = .walking
@@ -600,6 +742,7 @@ final class PetView: NSView {
     var isWalking = true
 
     private var petImages: [String: NSImage] = [:]
+    private let remoteImageLoader = FirebasePetResourceLoader()
     private var dragStartWindowOrigin: NSPoint = .zero
     private var dragStartScreenPoint: NSPoint = .zero
     private var didDrag = false
@@ -610,7 +753,17 @@ final class PetView: NSView {
         super.init(frame: frameRect)
         wantsLayer = true
         layer?.backgroundColor = NSColor.clear.cgColor
-        for name in [
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override var acceptsFirstResponder: Bool { true }
+    override var isOpaque: Bool { false }
+
+    func loadRemoteResources() {
+        let names = [
             "pet-idle",
             "pet-walk-1",
             "pet-walk-2",
@@ -620,17 +773,12 @@ final class PetView: NSView {
             "pet-sleep",
             "pet-eat",
             "pet-cuddle"
-        ] {
-            petImages[name] = NSImage(named: name)
+        ]
+        remoteImageLoader.loadImages(named: names) { [weak self] name, image in
+            self?.petImages[name] = image
+            self?.needsDisplay = true
         }
     }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override var acceptsFirstResponder: Bool { true }
-    override var isOpaque: Bool { false }
 
     func say(_ text: String) {
         speech = text

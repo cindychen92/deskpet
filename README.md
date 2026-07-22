@@ -44,7 +44,6 @@ build/DogDesktopPet.zip
 
 ```text
 Sources/       Swift 源码
-Resources/     桌宠图片资源
 DogDesktopPet.xcodeproj/  Xcode 项目与共享 scheme
 Release/       可直接分享的 zip 包
 Info.plist     macOS 应用配置
@@ -53,4 +52,4 @@ build.sh       本地构建脚本
 
 ## 说明
 
-图片资源来自个人宠物照片，仅用于个人分享和试玩。
+桌宠图片从 Firebase Storage 的 `resources/simba/` 路径加载，并缓存在本机。
