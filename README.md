@@ -25,6 +25,10 @@
 
 ## 从源码构建
 
+在 Xcode 中打开 `DogDesktopPet.xcodeproj`，选择 `DogDesktopPet` scheme，然后运行或归档。
+
+也可以继续使用命令行构建：
+
 ```bash
 ./build.sh
 ```
@@ -41,6 +45,7 @@ build/DogDesktopPet.zip
 ```text
 Sources/       Swift 源码
 Resources/     桌宠图片资源
+DogDesktopPet.xcodeproj/  Xcode 项目与共享 scheme
 Release/       可直接分享的 zip 包
 Info.plist     macOS 应用配置
 build.sh       本地构建脚本
