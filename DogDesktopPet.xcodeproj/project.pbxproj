@@ -10,6 +10,21 @@
 		55B52379301085E500349FD1 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 55B52378301085E500349FD1 /* FirebaseAuth */; };
 		55B52377301085E500349FD1 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 55B52376301085E500349FD1 /* FirebaseStorage */; };
 		A10000000000000000000001 /* DogDesktopPet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* DogDesktopPet.swift */; };
+		B10000000000000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000021 /* AppDelegate.swift */; };
+		B10000000000000000000002 /* DogDesktopPetMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000022 /* DogDesktopPetMain.swift */; };
+		B10000000000000000000003 /* PetWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000023 /* PetWindow.swift */; };
+		B10000000000000000000004 /* FirebaseConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000024 /* FirebaseConfiguration.swift */; };
+		B10000000000000000000005 /* FirebasePetResourceLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000025 /* FirebasePetResourceLoader.swift */; };
+		B10000000000000000000006 /* FirebasePetResourceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000026 /* FirebasePetResourceService.swift */; };
+		B10000000000000000000007 /* PetState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000027 /* PetState.swift */; };
+		B10000000000000000000008 /* PetStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000028 /* PetStateMachine.swift */; };
+		B10000000000000000000009 /* AnimationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000029 /* AnimationController.swift */; };
+		B1000000000000000000000A /* PositionEaser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000002A /* PositionEaser.swift */; };
+		B1000000000000000000000B /* PetResourceLoading.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000002B /* PetResourceLoading.swift */; };
+		B1000000000000000000000C /* PetResourcePresenting.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000002C /* PetResourcePresenting.swift */; };
+		B1000000000000000000000D /* PetViewDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000002D /* PetViewDelegate.swift */; };
+		B1000000000000000000000E /* PetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000002E /* PetView.swift */; };
+		B1000000000000000000000F /* PetMenuBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000002F /* PetMenuBuilder.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -17,6 +32,21 @@
 		A10000000000000000000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A10000000000000000000013 /* DogDesktopPet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DogDesktopPet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000014 /* GoogleService-Info.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.example.plist"; sourceTree = "<group>"; };
+		B10000000000000000000021 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		B10000000000000000000022 /* DogDesktopPetMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DogDesktopPetMain.swift; sourceTree = "<group>"; };
+		B10000000000000000000023 /* PetWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetWindow.swift; sourceTree = "<group>"; };
+		B10000000000000000000024 /* FirebaseConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebaseConfiguration.swift; sourceTree = "<group>"; };
+		B10000000000000000000025 /* FirebasePetResourceLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebasePetResourceLoader.swift; sourceTree = "<group>"; };
+		B10000000000000000000026 /* FirebasePetResourceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebasePetResourceService.swift; sourceTree = "<group>"; };
+		B10000000000000000000027 /* PetState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetState.swift; sourceTree = "<group>"; };
+		B10000000000000000000028 /* PetStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetStateMachine.swift; sourceTree = "<group>"; };
+		B10000000000000000000029 /* AnimationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimationController.swift; sourceTree = "<group>"; };
+		B1000000000000000000002A /* PositionEaser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PositionEaser.swift; sourceTree = "<group>"; };
+		B1000000000000000000002B /* PetResourceLoading.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetResourceLoading.swift; sourceTree = "<group>"; };
+		B1000000000000000000002C /* PetResourcePresenting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetResourcePresenting.swift; sourceTree = "<group>"; };
+		B1000000000000000000002D /* PetViewDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetViewDelegate.swift; sourceTree = "<group>"; };
+		B1000000000000000000002E /* PetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetView.swift; sourceTree = "<group>"; };
+		B1000000000000000000002F /* PetMenuBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetMenuBuilder.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -45,9 +75,72 @@
 		A10000000000000000000032 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				B10000000000000000000031 /* App */,
+				B10000000000000000000032 /* Firebase */,
+				B10000000000000000000033 /* PetDomain */,
+				B10000000000000000000034 /* Movement */,
+				B10000000000000000000035 /* Rendering */,
+				B10000000000000000000036 /* UI */,
 				A10000000000000000000011 /* DogDesktopPet.swift */,
 			);
 			path = Sources;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000031 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000021 /* AppDelegate.swift */,
+				B10000000000000000000022 /* DogDesktopPetMain.swift */,
+				B10000000000000000000023 /* PetWindow.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000032 /* Firebase */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000024 /* FirebaseConfiguration.swift */,
+				B10000000000000000000025 /* FirebasePetResourceLoader.swift */,
+				B10000000000000000000026 /* FirebasePetResourceService.swift */,
+			);
+			path = Firebase;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000033 /* PetDomain */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000027 /* PetState.swift */,
+				B10000000000000000000028 /* PetStateMachine.swift */,
+				B10000000000000000000029 /* AnimationController.swift */,
+			);
+			path = PetDomain;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000034 /* Movement */ = {
+			isa = PBXGroup;
+			children = (
+				B1000000000000000000002A /* PositionEaser.swift */,
+			);
+			path = Movement;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000035 /* Rendering */ = {
+			isa = PBXGroup;
+			children = (
+				B1000000000000000000002B /* PetResourceLoading.swift */,
+				B1000000000000000000002C /* PetResourcePresenting.swift */,
+				B1000000000000000000002D /* PetViewDelegate.swift */,
+				B1000000000000000000002E /* PetView.swift */,
+			);
+			path = Rendering;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000036 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				B1000000000000000000002F /* PetMenuBuilder.swift */,
+			);
+			path = UI;
 			sourceTree = "<group>";
 		};
 		A10000000000000000000034 /* Products */ = {
@@ -158,6 +251,21 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000001 /* DogDesktopPet.swift in Sources */,
+				B10000000000000000000001 /* AppDelegate.swift in Sources */,
+				B10000000000000000000002 /* DogDesktopPetMain.swift in Sources */,
+				B10000000000000000000003 /* PetWindow.swift in Sources */,
+				B10000000000000000000004 /* FirebaseConfiguration.swift in Sources */,
+				B10000000000000000000005 /* FirebasePetResourceLoader.swift in Sources */,
+				B10000000000000000000006 /* FirebasePetResourceService.swift in Sources */,
+				B10000000000000000000007 /* PetState.swift in Sources */,
+				B10000000000000000000008 /* PetStateMachine.swift in Sources */,
+				B10000000000000000000009 /* AnimationController.swift in Sources */,
+				B1000000000000000000000A /* PositionEaser.swift in Sources */,
+				B1000000000000000000000B /* PetResourceLoading.swift in Sources */,
+				B1000000000000000000000C /* PetResourcePresenting.swift in Sources */,
+				B1000000000000000000000D /* PetViewDelegate.swift in Sources */,
+				B1000000000000000000000E /* PetView.swift in Sources */,
+				B1000000000000000000000F /* PetMenuBuilder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
