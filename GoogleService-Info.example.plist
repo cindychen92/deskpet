@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyC75hwYFdt3ZHQRUlY_J5wVL0oKgbmNS3E</string>
+	<string>REPLACE_WITH_FIREBASE_IOS_API_KEY</string>
 	<key>GCM_SENDER_ID</key>
-	<string>729358413639</string>
+	<string>REPLACE_WITH_GCM_SENDER_ID</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>scrapps.deskpet</string>
 	<key>PROJECT_ID</key>
-	<string>deskpet-ad65c</string>
+	<string>REPLACE_WITH_FIREBASE_PROJECT_ID</string>
 	<key>STORAGE_BUCKET</key>
-	<string>deskpet-ad65c.firebasestorage.app</string>
+	<string>REPLACE_WITH_FIREBASE_STORAGE_BUCKET</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:729358413639:ios:7652afe30858d06205a662</string>
+	<string>REPLACE_WITH_GOOGLE_APP_ID</string>
 </dict>
 </plist>

@@ -40,6 +40,25 @@ build/DogDesktopPet.app
 build/DogDesktopPet.zip
 ```
 
+### Firebase 配置
+
+远程桌宠图片依赖 Firebase Storage。真实的 `GoogleService-Info.plist` 包含 Firebase app 配置和 API key，不应提交到 git。
+
+本地启用远程资源：
+
+1. 从 Firebase Console 下载配置文件：Project settings -> General -> Your apps。
+2. 选择 bundle ID 为 `scrapps.deskpet` 的 iOS/macOS app。
+3. 下载 `GoogleService-Info.plist`，放在仓库根目录。
+4. 重新构建应用。
+
+仓库中提供 `GoogleService-Info.example.plist` 作为占位模板。协作者应从 Firebase Console 或团队密码管理器获取真实 plist。没有本地 `GoogleService-Info.plist` 时，应用仍会启动，但会跳过 Firebase 远程资源加载。
+
+CI 如果需要 Firebase 远程资源，应在 Xcode 构建前从 secret 写入根目录的 `GoogleService-Info.plist`。不要把真实 plist 或 secret 输出到日志。
+
+### Firebase API key 轮换
+
+如果真实 plist 曾经出现在公开仓库中，请在 Google Cloud Console 轮换对应的 iOS key，并把新 key 限制到 bundle ID `scrapps.deskpet`。轮换后重新从 Firebase Console 下载 `GoogleService-Info.plist`，替换本地文件，并确认 Firebase Storage 资源加载正常。已有的本地 plist 不会自动更新，所有协作者和 CI 都切换到新 plist 后，再删除旧 key。
+
 ## 项目结构
 
 ```text
@@ -47,6 +66,7 @@ Sources/       Swift 源码
 DogDesktopPet.xcodeproj/  Xcode 项目与共享 scheme
 Release/       可直接分享的 zip 包
 Info.plist     macOS 应用配置
+GoogleService-Info.example.plist  Firebase 配置模板
 build.sh       本地构建脚本
 ```
 
