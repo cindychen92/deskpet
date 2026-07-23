@@ -3,6 +3,7 @@
 build/
 Release/
 Resources/
+GoogleService-Info.plist
 *.xcuserstate
 *.xcuserdatad/
 *.swp

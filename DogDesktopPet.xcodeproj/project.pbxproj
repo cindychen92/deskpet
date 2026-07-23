@@ -10,14 +10,13 @@
 		55B52379301085E500349FD1 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 55B52378301085E500349FD1 /* FirebaseAuth */; };
 		55B52377301085E500349FD1 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 55B52376301085E500349FD1 /* FirebaseStorage */; };
 		A10000000000000000000001 /* DogDesktopPet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* DogDesktopPet.swift */; };
-		A1000000000000000000000B /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000014 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A10000000000000000000011 /* DogDesktopPet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DogDesktopPet.swift; sourceTree = "<group>"; };
 		A10000000000000000000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A10000000000000000000013 /* DogDesktopPet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DogDesktopPet.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10000000000000000000014 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		A10000000000000000000014 /* GoogleService-Info.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.example.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,7 +37,7 @@
 			children = (
 				A10000000000000000000032 /* Sources */,
 				A10000000000000000000012 /* Info.plist */,
-				A10000000000000000000014 /* GoogleService-Info.plist */,
+				A10000000000000000000014 /* GoogleService-Info.example.plist */,
 				A10000000000000000000034 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -69,6 +68,7 @@
 				A10000000000000000000042 /* Sources */,
 				A10000000000000000000043 /* Frameworks */,
 				A10000000000000000000044 /* Resources */,
+				A10000000000000000000045 /* Copy Firebase Config */,
 			);
 			buildRules = (
 			);
@@ -124,11 +124,33 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1000000000000000000000B /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A10000000000000000000045 /* Copy Firebase Config */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy Firebase Config";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "CONFIG_PATH=\"${PROJECT_DIR}/GoogleService-Info.plist\"\nDEST_DIR=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\nDEST_PATH=\"${DEST_DIR}/GoogleService-Info.plist\"\n\nif [ -f \"${CONFIG_PATH}\" ]; then\n    mkdir -p \"${DEST_DIR}\"\n    cp \"${CONFIG_PATH}\" \"${DEST_PATH}\"\nelse\n    echo \"warning: GoogleService-Info.plist not found; Firebase-backed resources will be disabled.\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		A10000000000000000000042 /* Sources */ = {
