@@ -4,7 +4,10 @@ import QuartzCore
 final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
     private var window: PetWindow!
     private var petView: PetView!
+    private let resourceLoader = FirebasePetResourceLoader()
     private let resourceService = FirebasePetResourceService()
+    private var availablePets: [PetMetadata] = [.defaultSimba]
+    private var activePet: PetMetadata = .defaultSimba
     private var updateTimer: Timer?
     private var lastUpdateTime: CFTimeInterval = CACurrentMediaTime()
     private let stateMachine = PetStateMachine(initial: PetAction(state: .walking))
@@ -23,7 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
         resourceService.configureIfNeeded()
         NSApp.setActivationPolicy(.accessory)
         createWindow()
-        resourceService.authenticateAndLoadResources(into: petView)
+        loadPetMetadata()
         stateMachine.onEnter = { [weak self] action in
             self?.handleEntered(action)
         }
@@ -54,7 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
 
         petView = PetView(
             frame: NSRect(origin: .zero, size: size),
-            resourceLoader: FirebasePetResourceLoader()
+            resourceLoader: resourceLoader
         )
         petView.delegate = self
         window.contentView = petView
@@ -230,8 +233,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
     }
 
     func showPetMenu(for event: NSEvent) {
-        let menu = PetMenuBuilder.makeMenu(target: self, walkEnabled: walkEnabled)
+        let menu = PetMenuBuilder.makeMenu(
+            target: self,
+            walkEnabled: walkEnabled,
+            pets: availablePets,
+            activePetId: activePet.id
+        )
         NSMenu.popUpContextMenu(menu, with: event, for: petView)
+    }
+
+    private func loadPetMetadata() {
+        resourceService.authenticateAndLoadPets(
+            onLoaded: { [weak self] selection in
+                guard let self else { return }
+                self.availablePets = selection.pets
+                self.applyActivePet(selection.activePet, announcement: nil)
+            },
+            onError: { [weak self] message in
+                DispatchQueue.main.async {
+                    self?.petView.say(message)
+                }
+            }
+        )
+    }
+
+    private func applyActivePet(_ pet: PetMetadata, announcement: String?) {
+        activePet = pet
+        petView.loadRemoteResources(for: pet)
+        if let announcement {
+            petView.say(announcement)
+        }
     }
 
     @objc func setNormal() {
@@ -276,6 +307,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
 
     @objc func quit() {
         NSApp.terminate(nil)
+    }
+
+    @objc func selectPetFromMenu(_ sender: NSMenuItem) {
+        guard
+            let petId = sender.representedObject as? String,
+            let pet = availablePets.first(where: { $0.id == petId })
+        else {
+            petView.say("没有找到这个宠物。")
+            return
+        }
+
+        guard pet.requiredImagesComplete else {
+            petView.say("这个宠物的图片还不完整。")
+            return
+        }
+
+        resourceService.selectPet(pet) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let selectedPet):
+                    self?.applyActivePet(selectedPet, announcement: "已切换到 \(selectedPet.name)。")
+                case .failure(let error):
+                    NSLog("Unable to save active pet selection: \(error.localizedDescription)")
+                    self?.petView.say("宠物选择保存失败。")
+                }
+            }
+        }
     }
 
     private func requestAction(_ action: PetAction) {
