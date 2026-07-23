@@ -62,7 +62,13 @@ CI 如果需要 Firebase 远程资源，应在 Xcode 构建前从 secret 写入�
 ## 项目结构
 
 ```text
-Sources/       Swift 源码
+Sources/
+  App/         应用入口、AppDelegate、窗口生命周期
+  Firebase/    Firebase 配置、匿名认证、远程资源加载与缓存
+  PetDomain/   桌宠状态、动作、动画时序与状态机
+  Movement/    位置缓动和移动基础逻辑
+  Rendering/   PetView、绘制、资源加载协议和交互回调
+  UI/          右键菜单构建
 DogDesktopPet.xcodeproj/  Xcode 项目与共享 scheme
 Release/       可直接分享的 zip 包
 Info.plist     macOS 应用配置
