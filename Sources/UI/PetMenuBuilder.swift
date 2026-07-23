@@ -1,7 +1,12 @@
 import Cocoa
 
 enum PetMenuBuilder {
-    static func makeMenu(target: AnyObject, walkEnabled: Bool) -> NSMenu {
+    static func makeMenu(
+        target: AnyObject,
+        walkEnabled: Bool,
+        pets: [PetMetadata],
+        activePetId: String
+    ) -> NSMenu {
         let menu = NSMenu()
         addMenuItem("普通", action: #selector(AppDelegate.setNormal), target: target, to: menu)
         addMenuItem("趴下", action: #selector(AppDelegate.setLie), target: target, to: menu)
@@ -14,8 +19,41 @@ enum PetMenuBuilder {
         let walkTitle = walkEnabled ? "暂停边缘走动" : "继续边缘走动"
         addMenuItem(walkTitle, action: #selector(AppDelegate.toggleWalk), target: target, to: menu)
         menu.addItem(.separator())
+        addPetSelectionItems(
+            pets,
+            activePetId: activePetId,
+            target: target,
+            to: menu
+        )
+        menu.addItem(.separator())
         addMenuItem("退出桌宠", action: #selector(AppDelegate.quit), target: target, to: menu)
         return menu
+    }
+
+    private static func addPetSelectionItems(
+        _ pets: [PetMetadata],
+        activePetId: String,
+        target: AnyObject,
+        to menu: NSMenu
+    ) {
+        let petsMenu = NSMenu()
+        for pet in pets {
+            let title = pet.requiredImagesComplete ? pet.name : "\(pet.name)（资源不完整）"
+            let item = NSMenuItem(
+                title: title,
+                action: #selector(AppDelegate.selectPetFromMenu(_:)),
+                keyEquivalent: ""
+            )
+            item.target = target
+            item.representedObject = pet.id
+            item.state = pet.id == activePetId ? .on : .off
+            item.isEnabled = pet.requiredImagesComplete
+            petsMenu.addItem(item)
+        }
+
+        let item = NSMenuItem(title: "选择宠物", action: nil, keyEquivalent: "")
+        item.submenu = petsMenu
+        menu.addItem(item)
     }
 
     private static func addMenuItem(

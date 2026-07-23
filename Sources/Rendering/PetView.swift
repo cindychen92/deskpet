@@ -37,7 +37,9 @@ final class PetView: NSView, PetResourcePresenting {
     override var acceptsFirstResponder: Bool { true }
     override var isOpaque: Bool { false }
 
-    func loadRemoteResources() {
+    func loadRemoteResources(for pet: PetMetadata) {
+        resourceLoader.setActivePet(pet)
+        petImages.removeAll()
         let names = [
             "pet-idle",
             "pet-walk-1",
@@ -52,6 +54,17 @@ final class PetView: NSView, PetResourcePresenting {
         resourceLoader.loadImages(named: names) { [weak self] name, image in
             self?.petImages[name] = image
             self?.needsDisplay = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            guard
+                let self,
+                self.resourceLoader.activePet.id == pet.id,
+                self.petImages.isEmpty
+            else {
+                return
+            }
+            self.say("宠物图片加载失败，已显示备用图。")
         }
     }
 

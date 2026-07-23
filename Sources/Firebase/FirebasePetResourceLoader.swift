@@ -29,17 +29,22 @@ final class FirebasePetResourceLoader: PetResourceLoading {
     }
 
     private let cacheDirectory: URL
-    private let remoteDirectory = "resources/simba"
+    private(set) var activePet: PetMetadata
     private let networkAvailability: NetworkAvailability
     private let logLock = NSLock()
     private var lastNetworkFailureLogTime: TimeInterval = 0
     private let networkFailureLogInterval: TimeInterval = 60
 
-    init(fileManager: FileManager = .default) {
+    init(activePet: PetMetadata = .defaultSimba, fileManager: FileManager = .default) {
+        self.activePet = activePet
         networkAvailability = .shared
         let cachesDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         cacheDirectory = cachesDirectory.appendingPathComponent("DeskPet/PetResources", isDirectory: true)
         try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+    }
+
+    func setActivePet(_ pet: PetMetadata) {
+        activePet = pet
     }
 
     func loadImages(
@@ -73,12 +78,16 @@ final class FirebasePetResourceLoader: PetResourceLoading {
         }
 
         let cacheURL = imageURL(for: name)
+        try? FileManager.default.createDirectory(
+            at: cacheURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
         let temporaryURL = cacheDirectory.appendingPathComponent("\(name).download.png")
         try? FileManager.default.removeItem(at: temporaryURL)
 
         Storage.storage()
             .reference()
-            .child("\(remoteDirectory)/\(name).png")
+            .child("\(activePet.storagePath)/\(name).png")
             .write(toFile: temporaryURL) { [weak self] url, error in
                 guard let self else { return }
                 guard error == nil, let url, let image = NSImage(contentsOf: url) else {
@@ -113,7 +122,9 @@ final class FirebasePetResourceLoader: PetResourceLoading {
     }
 
     private func imageURL(for name: String) -> URL {
-        cacheDirectory.appendingPathComponent("\(name).png")
+        cacheDirectory
+            .appendingPathComponent(activePet.slug, isDirectory: true)
+            .appendingPathComponent("\(name).png")
     }
 
     private func isNetworkFailure(_ error: Error) -> Bool {

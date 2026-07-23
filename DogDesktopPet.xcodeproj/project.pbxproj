@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		55B52379301085E500349FD1 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 55B52378301085E500349FD1 /* FirebaseAuth */; };
 		55B52377301085E500349FD1 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 55B52376301085E500349FD1 /* FirebaseStorage */; };
+		55B5237B301085E500349FD1 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 55B5237A301085E500349FD1 /* FirebaseFirestore */; };
 		A10000000000000000000001 /* DogDesktopPet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* DogDesktopPet.swift */; };
 		B10000000000000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000021 /* AppDelegate.swift */; };
 		B10000000000000000000002 /* DogDesktopPetMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000022 /* DogDesktopPetMain.swift */; };
@@ -25,6 +26,8 @@
 		B1000000000000000000000D /* PetViewDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000002D /* PetViewDelegate.swift */; };
 		B1000000000000000000000E /* PetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000002E /* PetView.swift */; };
 		B1000000000000000000000F /* PetMenuBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000002F /* PetMenuBuilder.swift */; };
+		B10000000000000000000010 /* PetMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000030 /* PetMetadata.swift */; };
+		B10000000000000000000011 /* FirestorePetRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000037 /* FirestorePetRepository.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +50,8 @@
 		B1000000000000000000002D /* PetViewDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetViewDelegate.swift; sourceTree = "<group>"; };
 		B1000000000000000000002E /* PetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetView.swift; sourceTree = "<group>"; };
 		B1000000000000000000002F /* PetMenuBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetMenuBuilder.swift; sourceTree = "<group>"; };
+		B10000000000000000000030 /* PetMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetMetadata.swift; sourceTree = "<group>"; };
+		B10000000000000000000037 /* FirestorePetRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirestorePetRepository.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -56,6 +61,7 @@
 			files = (
 				55B52379301085E500349FD1 /* FirebaseAuth in Frameworks */,
 				55B52377301085E500349FD1 /* FirebaseStorage in Frameworks */,
+				55B5237B301085E500349FD1 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,6 +106,7 @@
 			isa = PBXGroup;
 			children = (
 				B10000000000000000000024 /* FirebaseConfiguration.swift */,
+				B10000000000000000000037 /* FirestorePetRepository.swift */,
 				B10000000000000000000025 /* FirebasePetResourceLoader.swift */,
 				B10000000000000000000026 /* FirebasePetResourceService.swift */,
 			);
@@ -110,6 +117,7 @@
 			isa = PBXGroup;
 			children = (
 				B10000000000000000000027 /* PetState.swift */,
+				B10000000000000000000030 /* PetMetadata.swift */,
 				B10000000000000000000028 /* PetStateMachine.swift */,
 				B10000000000000000000029 /* AnimationController.swift */,
 			);
@@ -171,6 +179,7 @@
 			packageProductDependencies = (
 				55B52378301085E500349FD1 /* FirebaseAuth */,
 				55B52376301085E500349FD1 /* FirebaseStorage */,
+				55B5237A301085E500349FD1 /* FirebaseFirestore */,
 			);
 			productName = DogDesktopPet;
 			productReference = A10000000000000000000013 /* DogDesktopPet.app */;
@@ -257,7 +266,9 @@
 				B10000000000000000000004 /* FirebaseConfiguration.swift in Sources */,
 				B10000000000000000000005 /* FirebasePetResourceLoader.swift in Sources */,
 				B10000000000000000000006 /* FirebasePetResourceService.swift in Sources */,
+				B10000000000000000000011 /* FirestorePetRepository.swift in Sources */,
 				B10000000000000000000007 /* PetState.swift in Sources */,
+				B10000000000000000000010 /* PetMetadata.swift in Sources */,
 				B10000000000000000000008 /* PetStateMachine.swift in Sources */,
 				B10000000000000000000009 /* AnimationController.swift in Sources */,
 				B1000000000000000000000A /* PositionEaser.swift in Sources */,
@@ -376,6 +387,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 55B52375301085E500349FD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseStorage;
+		};
+		55B5237A301085E500349FD1 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 55B52375301085E500349FD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
