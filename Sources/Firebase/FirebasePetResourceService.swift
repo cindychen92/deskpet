@@ -1,5 +1,7 @@
-import Foundation
+import Cocoa
 import FirebaseAuth
+import FirebaseCore
+import GoogleSignIn
 
 final class FirebasePetResourceService {
     private var repository: FirestorePetRepository?
@@ -28,7 +30,8 @@ final class FirebasePetResourceService {
                 PetSelectionState(
                     currentUserId: "",
                     pets: [.defaultSimba],
-                    activePet: .defaultSimba
+                    activePet: .defaultSimba,
+                    accountState: .unavailable
                 )
             )
             return
@@ -36,7 +39,12 @@ final class FirebasePetResourceService {
 
         if let userId = Auth.auth().currentUser?.uid {
             currentUserId = userId
-            loadPets(forUserId: userId, onLoaded: onLoaded, onError: onError)
+            loadPets(
+                forUserId: userId,
+                accountState: Self.accountState(for: Auth.auth().currentUser),
+                onLoaded: onLoaded,
+                onError: onError
+            )
             return
         }
 
@@ -52,7 +60,8 @@ final class FirebasePetResourceService {
                         PetSelectionState(
                             currentUserId: "",
                             pets: [.defaultSimba],
-                            activePet: .defaultSimba
+                            activePet: .defaultSimba,
+                            accountState: .unavailable
                         )
                     )
                 }
@@ -65,7 +74,8 @@ final class FirebasePetResourceService {
                         PetSelectionState(
                             currentUserId: "",
                             pets: [.defaultSimba],
-                            activePet: .defaultSimba
+                            activePet: .defaultSimba,
+                            accountState: .unavailable
                         )
                     )
                 }
@@ -73,7 +83,87 @@ final class FirebasePetResourceService {
             }
             self.currentUserId = userId
             DispatchQueue.main.async {
-                self.loadPets(forUserId: userId, onLoaded: onLoaded, onError: onError)
+                self.loadPets(
+                    forUserId: userId,
+                    accountState: .anonymous,
+                    onLoaded: onLoaded,
+                    onError: onError
+                )
+            }
+        }
+    }
+
+    func signInWithGoogle(
+        presenting window: NSWindow,
+        completion: @escaping (Result<Void, FirebasePetAuthenticationError>) -> Void
+    ) {
+        guard
+            FirebaseConfiguration.isConfigured,
+            let clientID = FirebaseApp.app()?.options.clientID,
+            !clientID.isEmpty
+        else {
+            completion(.failure(.notConfigured))
+            return
+        }
+
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
+        GIDSignIn.sharedInstance.signIn(withPresenting: window) { [weak self] result, error in
+            if let error {
+                let nsError = error as NSError
+                if nsError.domain == "com.google.GIDSignIn", nsError.code == -5 {
+                    completion(.failure(.cancelled))
+                } else {
+                    NSLog("Google sign-in failed: \(nsError.localizedDescription)")
+                    completion(.failure(.googleSignInFailed))
+                }
+                return
+            }
+
+            guard
+                let self,
+                let googleUser = result?.user,
+                let idToken = googleUser.idToken?.tokenString
+            else {
+                completion(.failure(.missingGoogleCredential))
+                return
+            }
+
+            let credential = GoogleAuthProvider.credential(
+                withIDToken: idToken,
+                accessToken: googleUser.accessToken.tokenString
+            )
+            self.authenticate(with: credential, completion: completion)
+        }
+    }
+
+    func signOut(
+        completion: @escaping (Result<Void, FirebasePetAuthenticationError>) -> Void
+    ) {
+        guard FirebaseConfiguration.isConfigured else {
+            completion(.failure(.notConfigured))
+            return
+        }
+
+        do {
+            GIDSignIn.sharedInstance.signOut()
+            try Auth.auth().signOut()
+        } catch {
+            NSLog("Firebase sign-out failed: \(error.localizedDescription)")
+            completion(.failure(.signOutFailed))
+            return
+        }
+
+        Auth.auth().signInAnonymously { [weak self] result, error in
+            guard let self, let userId = result?.user.uid, error == nil else {
+                if let error {
+                    NSLog("Anonymous sign-in after sign-out failed: \(error.localizedDescription)")
+                }
+                completion(.failure(.anonymousSignInFailed))
+                return
+            }
+            self.currentUserId = userId
+            DispatchQueue.main.async {
+                completion(.success(()))
             }
         }
     }
@@ -82,6 +172,10 @@ final class FirebasePetResourceService {
         _ pet: PetMetadata,
         completion: @escaping (Result<PetMetadata, Error>) -> Void
     ) {
+        guard isAccessible(pet) else {
+            completion(.failure(FirebasePetResourceServiceError.petNotAccessible))
+            return
+        }
         guard !currentUserId.isNilOrEmpty else {
             completion(.success(pet))
             return
@@ -101,7 +195,11 @@ final class FirebasePetResourceService {
         _ pet: PetMetadata,
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
-        guard let currentUserId, !currentUserId.isEmpty else {
+        guard
+            let currentUserId,
+            !currentUserId.isEmpty,
+            Self.accountState(for: Auth.auth().currentUser).canUploadPrivatePets
+        else {
             completion(.failure(FirebasePetResourceServiceError.missingCurrentUser))
             return
         }
@@ -140,12 +238,75 @@ final class FirebasePetResourceService {
         }
     }
 
+    func renamePet(
+        _ pet: PetMetadata,
+        to proposedName: String,
+        completion: @escaping (Result<PetMetadata, Error>) -> Void
+    ) {
+        guard let userId = ownerUserId(for: pet) else {
+            completion(.failure(FirebasePetResourceServiceError.petNotManageable))
+            return
+        }
+
+        let name: String
+        switch PetResourceManifest.validatedPetName(proposedName) {
+        case .success(let validatedName):
+            name = validatedName
+        case .failure(let error):
+            completion(.failure(error))
+            return
+        }
+
+        petRepository.renamePet(pet.id, to: name, forUserId: userId) { result in
+            switch result {
+            case .success:
+                completion(.success(pet.renamed(to: name)))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func deletePet(
+        _ pet: PetMetadata,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        guard let userId = ownerUserId(for: pet) else {
+            completion(.failure(FirebasePetResourceServiceError.petNotManageable))
+            return
+        }
+
+        petRepository.deletePet(pet.id, forUserId: userId) { [weak self] result in
+            switch result {
+            case .failure(let error):
+                completion(.failure(error))
+            case .success:
+                guard let self else {
+                    completion(.success(()))
+                    return
+                }
+                self.uploader.deleteResources(for: pet) { errors in
+                    if !errors.isEmpty {
+                        NSLog(
+                            "Deleted pet metadata but could not remove all storage objects for \(pet.id): \(errors)"
+                        )
+                    }
+                    completion(.success(()))
+                }
+            }
+        }
+    }
+
     private func loadPets(
         forUserId userId: String,
+        accountState: PetAccountState,
         onLoaded: @escaping (PetSelectionState) -> Void,
         onError: @escaping (String) -> Void
     ) {
-        petRepository.loadPets(forUserId: userId) { result in
+        petRepository.loadPets(
+            forUserId: userId,
+            includeOwnedPets: accountState.canUploadPrivatePets
+        ) { result in
             switch result {
             case .success(let (pets, activePetId)):
                 let normalizedPets = self.normalizedPets(pets)
@@ -158,7 +319,8 @@ final class FirebasePetResourceService {
                         PetSelectionState(
                             currentUserId: userId,
                             pets: [.defaultSimba],
-                            activePet: .defaultSimba
+                            activePet: .defaultSimba,
+                            accountState: accountState
                         )
                     )
                     return
@@ -168,7 +330,8 @@ final class FirebasePetResourceService {
                     PetSelectionState(
                         currentUserId: userId,
                         pets: normalizedPets,
-                        activePet: activePet
+                        activePet: activePet,
+                        accountState: accountState
                     )
                 )
 
@@ -183,7 +346,8 @@ final class FirebasePetResourceService {
                     PetSelectionState(
                         currentUserId: userId,
                         pets: [.defaultSimba],
-                        activePet: .defaultSimba
+                        activePet: .defaultSimba,
+                        accountState: accountState
                     )
                 )
             }
@@ -233,15 +397,128 @@ final class FirebasePetResourceService {
 
         return pets.first(where: \.requiredImagesComplete)
     }
+
+    private func authenticate(
+        with credential: AuthCredential,
+        completion: @escaping (Result<Void, FirebasePetAuthenticationError>) -> Void
+    ) {
+        guard let user = Auth.auth().currentUser else {
+            completion(.failure(.missingAnonymousUser))
+            return
+        }
+
+        let finish: (AuthDataResult?, Error?) -> Void = { [weak self] result, error in
+            if let error {
+                NSLog("Firebase Google authentication failed: \(error.localizedDescription)")
+                completion(.failure(.firebaseSignInFailed))
+                return
+            }
+            guard let self, let userId = result?.user.uid else {
+                completion(.failure(.firebaseSignInFailed))
+                return
+            }
+            self.currentUserId = userId
+            DispatchQueue.main.async {
+                completion(.success(()))
+            }
+        }
+
+        guard user.isAnonymous else {
+            Auth.auth().signIn(with: credential, completion: finish)
+            return
+        }
+
+        user.link(with: credential) { result, error in
+            guard let error else {
+                finish(result, nil)
+                return
+            }
+
+            let code = (error as NSError).code
+            let canUseExistingAccount = code == AuthErrorCode.credentialAlreadyInUse.rawValue
+                || code == AuthErrorCode.emailAlreadyInUse.rawValue
+            if canUseExistingAccount {
+                Auth.auth().signIn(with: credential, completion: finish)
+            } else {
+                finish(nil, error)
+            }
+        }
+    }
+
+    private func isAccessible(_ pet: PetMetadata) -> Bool {
+        if pet.isPublic || pet.isDefault {
+            return true
+        }
+        guard
+            let currentUserId,
+            Self.accountState(for: Auth.auth().currentUser).canUploadPrivatePets
+        else {
+            return false
+        }
+        return pet.ownerUid == currentUserId
+    }
+
+    private func ownerUserId(for pet: PetMetadata) -> String? {
+        guard
+            !pet.isDefault,
+            !pet.isPublic,
+            let currentUserId,
+            pet.ownerUid == currentUserId,
+            Self.accountState(for: Auth.auth().currentUser).canUploadPrivatePets
+        else {
+            return nil
+        }
+        return currentUserId
+    }
+
+    private static func accountState(for user: User?) -> PetAccountState {
+        guard let user else { return .unavailable }
+        guard !user.isAnonymous else { return .anonymous }
+        guard user.providerData.contains(where: { $0.providerID == "google.com" }) else {
+            return .anonymous
+        }
+        return .google(displayName: user.displayName, email: user.email)
+    }
 }
 
 enum FirebasePetResourceServiceError: LocalizedError {
     case missingCurrentUser
+    case petNotAccessible
+    case petNotManageable
 
     var errorDescription: String? {
         switch self {
         case .missingCurrentUser:
-            return L10n.text("error.firebase.missing_user")
+            return L10n.text("error.firebase.google_required")
+        case .petNotAccessible:
+            return L10n.text("error.pet.not_accessible")
+        case .petNotManageable:
+            return L10n.text("error.pet.not_manageable")
+        }
+    }
+}
+
+enum FirebasePetAuthenticationError: LocalizedError {
+    case notConfigured
+    case cancelled
+    case googleSignInFailed
+    case missingGoogleCredential
+    case missingAnonymousUser
+    case firebaseSignInFailed
+    case signOutFailed
+    case anonymousSignInFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .notConfigured:
+            return L10n.text("error.firebase.not_configured")
+        case .cancelled:
+            return L10n.text("auth.sign_in.cancelled")
+        case .googleSignInFailed, .missingGoogleCredential, .missingAnonymousUser,
+             .firebaseSignInFailed:
+            return L10n.text("auth.sign_in.failed")
+        case .signOutFailed, .anonymousSignInFailed:
+            return L10n.text("auth.sign_out.failed")
         }
     }
 }

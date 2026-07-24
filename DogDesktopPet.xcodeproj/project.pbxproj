@@ -10,6 +10,7 @@
 		55B52379301085E500349FD1 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 55B52378301085E500349FD1 /* FirebaseAuth */; };
 		55B52377301085E500349FD1 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 55B52376301085E500349FD1 /* FirebaseStorage */; };
 		55B5237B301085E500349FD1 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 55B5237A301085E500349FD1 /* FirebaseFirestore */; };
+		C20000000000000000000001 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = C20000000000000000000002 /* GoogleSignIn */; };
 		A10000000000000000000001 /* DogDesktopPet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* DogDesktopPet.swift */; };
 		B10000000000000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000021 /* AppDelegate.swift */; };
 		B10000000000000000000002 /* DogDesktopPetMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000022 /* DogDesktopPetMain.swift */; };
@@ -72,6 +73,7 @@
 				55B52379301085E500349FD1 /* FirebaseAuth in Frameworks */,
 				55B52377301085E500349FD1 /* FirebaseStorage in Frameworks */,
 				55B5237B301085E500349FD1 /* FirebaseFirestore in Frameworks */,
+				C20000000000000000000001 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -203,6 +205,7 @@
 				55B52378301085E500349FD1 /* FirebaseAuth */,
 				55B52376301085E500349FD1 /* FirebaseStorage */,
 				55B5237A301085E500349FD1 /* FirebaseFirestore */,
+				C20000000000000000000002 /* GoogleSignIn */,
 			);
 			productName = DogDesktopPet;
 			productReference = A10000000000000000000013 /* DogDesktopPet.app */;
@@ -234,6 +237,7 @@
 			mainGroup = A10000000000000000000031;
 			packageReferences = (
 				55B52375301085E500349FD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				C20000000000000000000003 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			productRefGroup = A10000000000000000000034 /* Products */;
 			projectDirPath = "";
@@ -274,7 +278,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "CONFIG_PATH=\"${PROJECT_DIR}/GoogleService-Info.plist\"\nDEST_DIR=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\nDEST_PATH=\"${DEST_DIR}/GoogleService-Info.plist\"\n\nif [ -f \"${CONFIG_PATH}\" ]; then\n    mkdir -p \"${DEST_DIR}\"\n    cp \"${CONFIG_PATH}\" \"${DEST_PATH}\"\nelse\n    echo \"warning: GoogleService-Info.plist not found; Firebase-backed resources will be disabled.\"\nfi\n";
+			shellScript = "CONFIG_PATH=\"${PROJECT_DIR}/GoogleService-Info.plist\"\nDEST_DIR=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\nDEST_PATH=\"${DEST_DIR}/GoogleService-Info.plist\"\nBUILT_INFO_PLIST=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\n\nif [ -f \"${CONFIG_PATH}\" ]; then\n    mkdir -p \"${DEST_DIR}\"\n    cp \"${CONFIG_PATH}\" \"${DEST_PATH}\"\n\n    CLIENT_ID=$(/usr/libexec/PlistBuddy -c \"Print :CLIENT_ID\" \"${CONFIG_PATH}\" 2>/dev/null || true)\n    REVERSED_CLIENT_ID=$(/usr/libexec/PlistBuddy -c \"Print :REVERSED_CLIENT_ID\" \"${CONFIG_PATH}\" 2>/dev/null || true)\n    if [ -n \"${CLIENT_ID}\" ] && [ -n \"${REVERSED_CLIENT_ID}\" ] && [ -f \"${BUILT_INFO_PLIST}\" ]; then\n        /usr/bin/plutil -remove CFBundleURLTypes \"${BUILT_INFO_PLIST}\" 2>/dev/null || true\n        /usr/bin/plutil -insert CFBundleURLTypes -json \"[{\\\"CFBundleTypeRole\\\":\\\"Editor\\\",\\\"CFBundleURLSchemes\\\":[\\\"${REVERSED_CLIENT_ID}\\\"]}]\" \"${BUILT_INFO_PLIST}\"\n        /usr/bin/plutil -replace GIDClientID -string \"${CLIENT_ID}\" \"${BUILT_INFO_PLIST}\" 2>/dev/null || /usr/bin/plutil -insert GIDClientID -string \"${CLIENT_ID}\" \"${BUILT_INFO_PLIST}\"\n        /usr/bin/plutil -type CFBundleURLTypes \"${BUILT_INFO_PLIST}\" | /usr/bin/grep -q '^array$' || { echo \"error: CFBundleURLTypes must be an array.\"; exit 1; }\n        /usr/bin/plutil -type CFBundleURLTypes.0 \"${BUILT_INFO_PLIST}\" | /usr/bin/grep -q '^dictionary$' || { echo \"error: CFBundleURLTypes entries must be dictionaries.\"; exit 1; }\n    else\n        echo \"warning: CLIENT_ID or REVERSED_CLIENT_ID is missing; Google sign-in will be unavailable.\"\n    fi\nelse\n    echo \"warning: GoogleService-Info.plist not found; Firebase-backed resources will be disabled.\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -403,6 +407,14 @@
 				minimumVersion = 12.16.0;
 			};
 		};
+		C20000000000000000000003 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -420,6 +432,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 55B52375301085E500349FD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		C20000000000000000000002 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C20000000000000000000003 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

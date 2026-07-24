@@ -37,7 +37,7 @@ final class FirebasePetResourceUploader {
         }
 
         let petId = UUID().uuidString.lowercased()
-        let storagePath = "resources/\(petId)"
+        let storagePath = "users/\(ownerUserId)/pets/\(petId)"
         let pet = PetMetadata(
             id: petId,
             name: validatedName,
@@ -45,7 +45,8 @@ final class FirebasePetResourceUploader {
             ownerUid: ownerUserId,
             storagePath: storagePath,
             requiredImagesComplete: true,
-            isDefault: false
+            isDefault: false,
+            isPublic: false
         )
         let group = DispatchGroup()
         let lock = NSLock()
@@ -78,6 +79,37 @@ final class FirebasePetResourceUploader {
             } else {
                 completion(.success(pet))
             }
+        }
+    }
+
+    func deleteResources(
+        for pet: PetMetadata,
+        completion: @escaping ([Error]) -> Void
+    ) {
+        let group = DispatchGroup()
+        let lock = NSLock()
+        var errors: [Error] = []
+
+        for name in PetResourceManifest.requiredImageNames {
+            group.enter()
+            Storage.storage()
+                .reference()
+                .child("\(pet.storagePath)/\(name).png")
+                .delete { error in
+                    if let error {
+                        let nsError = error as NSError
+                        if nsError.code != StorageErrorCode.objectNotFound.rawValue {
+                            lock.lock()
+                            errors.append(error)
+                            lock.unlock()
+                        }
+                    }
+                    group.leave()
+                }
+        }
+
+        group.notify(queue: .main) {
+            completion(errors)
         }
     }
 
