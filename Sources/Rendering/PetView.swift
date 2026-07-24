@@ -40,18 +40,7 @@ final class PetView: NSView, PetResourcePresenting {
     func loadRemoteResources(for pet: PetMetadata) {
         resourceLoader.setActivePet(pet)
         petImages.removeAll()
-        let names = [
-            "pet-idle",
-            "pet-walk-1",
-            "pet-walk-2",
-            "pet-walk-3",
-            "pet-walk-4",
-            "pet-lie",
-            "pet-sleep",
-            "pet-eat",
-            "pet-cuddle"
-        ]
-        resourceLoader.loadImages(named: names) { [weak self] name, image in
+        resourceLoader.loadImages(named: PetResourceManifest.requiredImageNames) { [weak self] name, image in
             self?.petImages[name] = image
             self?.needsDisplay = true
         }
