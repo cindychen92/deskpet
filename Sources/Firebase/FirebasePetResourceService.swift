@@ -276,23 +276,18 @@ final class FirebasePetResourceService {
             return
         }
 
-        petRepository.deletePet(pet.id, forUserId: userId) { [weak self] result in
-            switch result {
-            case .failure(let error):
+        uploader.deleteResources(for: pet) { [weak self] errors in
+            if let error = errors.first {
+                NSLog("Unable to delete all storage objects for \(pet.id): \(errors)")
                 completion(.failure(error))
-            case .success:
-                guard let self else {
-                    completion(.success(()))
-                    return
-                }
-                self.uploader.deleteResources(for: pet) { errors in
-                    if !errors.isEmpty {
-                        NSLog(
-                            "Deleted pet metadata but could not remove all storage objects for \(pet.id): \(errors)"
-                        )
-                    }
-                    completion(.success(()))
-                }
+                return
+            }
+            guard let self else {
+                completion(.success(()))
+                return
+            }
+            self.petRepository.deletePet(pet.id, forUserId: userId) { result in
+                completion(result)
             }
         }
     }
@@ -355,13 +350,21 @@ final class FirebasePetResourceService {
     }
 
     private func normalizedPets(_ pets: [PetMetadata]) -> [PetMetadata] {
-        var petsById = Dictionary(
+        let petsById = Dictionary(
             uniqueKeysWithValues: pets
                 .filter(\.requiredImagesComplete)
                 .map { ($0.id, $0) }
         )
-        petsById[PetMetadata.defaultSimba.id] = petsById[PetMetadata.defaultSimba.id] ?? .defaultSimba
-        return petsById.values.sorted { lhs, rhs in
+        var normalizedPets = Array(petsById.values)
+        let containsCanonicalDefault = normalizedPets.contains {
+            $0.isDefault
+                || $0.slug.caseInsensitiveCompare(PetMetadata.defaultSimba.slug) == .orderedSame
+        }
+        if !containsCanonicalDefault {
+            normalizedPets.append(.defaultSimba)
+        }
+
+        return normalizedPets.sorted { lhs, rhs in
             if lhs.isDefault != rhs.isDefault {
                 return lhs.isDefault
             }

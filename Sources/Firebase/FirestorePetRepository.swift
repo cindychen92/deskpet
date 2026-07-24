@@ -99,16 +99,8 @@ final class FirestorePetRepository {
             return
         }
 
-        let document = database.collection("pets").document(pet.id)
-        document.getDocument { snapshot, error in
-            if let error {
-                DispatchQueue.main.async {
-                    completion(.failure(error))
-                }
-                return
-            }
-
-            var data: [String: Any] = [
+        database.collection("pets").document(pet.id).setData(
+            [
                 "name": pet.name,
                 "slug": pet.slug,
                 "ownerUid": userId,
@@ -116,20 +108,15 @@ final class FirestorePetRepository {
                 "requiredImagesComplete": true,
                 "isDefault": false,
                 "isPublic": false,
+                "createdAt": FieldValue.serverTimestamp(),
                 "updatedAt": FieldValue.serverTimestamp()
             ]
-
-            if snapshot?.exists != true {
-                data["createdAt"] = FieldValue.serverTimestamp()
-            }
-
-            document.setData(data, merge: true) { error in
-                DispatchQueue.main.async {
-                    if let error {
-                        completion(.failure(error))
-                    } else {
-                        completion(.success(()))
-                    }
+        ) { error in
+            DispatchQueue.main.async {
+                if let error {
+                    completion(.failure(error))
+                } else {
+                    completion(.success(()))
                 }
             }
         }
@@ -180,8 +167,7 @@ final class FirestorePetRepository {
     private static func makePetMetadata(id: String, data: [String: Any]) -> PetMetadata? {
         guard
             let name = data["name"] as? String,
-            let slug = data["slug"] as? String,
-            let storagePath = data["storagePath"] as? String
+            let slug = data["slug"] as? String
         else {
             return nil
         }
@@ -191,7 +177,7 @@ final class FirestorePetRepository {
             name: name,
             slug: slug,
             ownerUid: data["ownerUid"] as? String,
-            storagePath: storagePath,
+            storagePath: "resources/\(id)",
             requiredImagesComplete: data["requiredImagesComplete"] as? Bool ?? false,
             isDefault: data["isDefault"] as? Bool ?? false,
             isPublic: data["isPublic"] as? Bool ?? false

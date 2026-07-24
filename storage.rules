@@ -2,9 +2,8 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    function isGoogleOwner(userId) {
+    function isGoogleUser() {
       return request.auth != null
-        && request.auth.uid == userId
         && request.auth.token.firebase.sign_in_provider == "google.com";
     }
 
@@ -22,15 +21,34 @@ service firebase.storage {
       ).data.isPublic == true;
     }
 
+    function isPetOwner(petId) {
+      return isGoogleUser()
+        && firestore.get(
+          /databases/(default)/documents/pets/$(petId)
+        ).data.ownerUid == request.auth.uid;
+    }
+
+    function isNewUploadOwner(petId) {
+      return isGoogleUser()
+        && request.resource.metadata.ownerUid == request.auth.uid
+        && request.resource.metadata.petId == petId;
+    }
+
+    function isStoredUploadOwner() {
+      return isGoogleUser()
+        && resource.metadata.ownerUid == request.auth.uid;
+    }
+
     match /resources/simba/{fileName} {
       allow read;
     }
 
-    match /users/{userId}/pets/{petId}/{fileName} {
-      allow read: if isGoogleOwner(userId) || isPublicPet(petId);
-      allow create, update: if isGoogleOwner(userId)
+    match /resources/{petId}/{fileName} {
+      allow read: if isPublicPet(petId) || isPetOwner(petId);
+      allow create: if resource == null
+        && isNewUploadOwner(petId)
         && isValidPetImage(fileName);
-      allow delete: if isGoogleOwner(userId);
+      allow delete: if isStoredUploadOwner() || isPetOwner(petId);
     }
   }
 }
