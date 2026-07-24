@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isGoogleUser() {
+      return isSignedIn()
+        && request.auth.token.firebase.sign_in_provider == "google.com";
+    }
+
+    function canAccessPet(petId) {
+      let pet = get(/databases/$(database)/documents/pets/$(petId)).data;
+      return pet.isPublic == true
+        || (isGoogleUser() && pet.ownerUid == request.auth.uid);
+    }
+
+    match /pets/{petId} {
+      allow read: if resource.data.isPublic == true
+        || (isGoogleUser() && resource.data.ownerUid == request.auth.uid);
+
+      allow create: if isGoogleUser()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.isPublic == false
+        && request.resource.data.isDefault == false;
+
+      allow update: if isGoogleUser()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.isDefault == resource.data.isDefault;
+
+      allow delete: if isGoogleUser()
+        && resource.data.ownerUid == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(["activePetId", "updatedAt"])
+        && canAccessPet(request.resource.data.activePetId);
+
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["activePetId", "updatedAt"])
+        && canAccessPet(request.resource.data.activePetId);
+    }
+  }
+}

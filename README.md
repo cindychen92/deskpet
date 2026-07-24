@@ -53,6 +53,22 @@ build/DogDesktopPet.zip
 
 仓库中提供 `GoogleService-Info.example.plist` 作为占位模板。协作者应从 Firebase Console 或团队密码管理器获取真实 plist。没有本地 `GoogleService-Info.plist` 时，应用仍会启动，但会跳过 Firebase 远程资源加载。
 
+私人宠物上传还需要在 Firebase Authentication 中同时启用 Anonymous 和
+Google 提供商。配置 Google 后重新下载 plist，并确认其中包含 `CLIENT_ID` 和
+`REVERSED_CLIENT_ID`；构建脚本会用后者注册 macOS 登录回调 URL。
+
+将仓库中的访问规则部署到对应的 Firebase 项目：
+
+```sh
+firebase deploy --only firestore:rules,storage
+```
+
+用户拥有的宠物图片始终位于 `users/<uid>/pets/<pet-id>/`，所有权和可见性相互
+独立。Firestore 文档中的 `isPublic` 控制其他用户能否读取图片，因此切换公开或
+私有状态不需要移动 Storage 文件。使用跨服务 Storage 规则时，Firebase 会提示
+启用读取 Firestore 的服务权限。内置 Simba 可以继续使用 `resources/simba/`。完整验收步骤见
+[`docs/AUTHENTICATION_CHECKS.md`](docs/AUTHENTICATION_CHECKS.md)。
+
 CI 如果需要 Firebase 远程资源，应在 Xcode 构建前从 secret 写入根目录的 `GoogleService-Info.plist`。不要把真实 plist 或 secret 输出到日志。
 
 ### Firebase API key 轮换
