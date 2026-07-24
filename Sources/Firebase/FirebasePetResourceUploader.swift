@@ -1,5 +1,4 @@
 import Cocoa
-import CryptoKit
 import Foundation
 import FirebaseStorage
 
@@ -37,8 +36,8 @@ final class FirebasePetResourceUploader {
             }
         }
 
-        let petId = "custom-\(SHA256.hash(data: Data(validatedName.utf8)).hexString)"
-        let storagePath = "resources/\(validatedName)"
+        let petId = UUID().uuidString.lowercased()
+        let storagePath = "resources/\(petId)"
         let pet = PetMetadata(
             id: petId,
             name: validatedName,
@@ -91,12 +90,6 @@ final class FirebasePetResourceUploader {
             return false
         }
         return NSImage(contentsOf: url) != nil
-    }
-}
-
-private extension SHA256.Digest {
-    var hexString: String {
-        map { String(format: "%02x", $0) }.joined()
     }
 }
 

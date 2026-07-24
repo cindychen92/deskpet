@@ -22,15 +22,6 @@ enum PetResourceManifest {
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return .failure(.empty)
         }
-        guard name != ".", name != ".." else {
-            return .failure(.reservedPathComponent)
-        }
-        guard name != PetMetadata.defaultSimba.slug else {
-            return .failure(.reservedDefaultPet)
-        }
-        guard !name.contains("/"), !name.contains("\\") else {
-            return .failure(.containsPathSeparator)
-        }
         guard !name.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
             return .failure(.containsControlCharacter)
         }
@@ -45,21 +36,12 @@ struct PetResourceRequirement {
 
 enum PetNameValidationError: LocalizedError {
     case empty
-    case reservedPathComponent
-    case reservedDefaultPet
-    case containsPathSeparator
     case containsControlCharacter
 
     var errorDescription: String? {
         switch self {
         case .empty:
             return "请输入宠物名称。"
-        case .reservedPathComponent:
-            return "宠物名称不能是“.”或“..”。"
-        case .reservedDefaultPet:
-            return "“simba”是默认宠物名称，请使用其他名称。"
-        case .containsPathSeparator:
-            return "宠物名称不能包含“/”或“\\”。"
         case .containsControlCharacter:
             return "宠物名称不能包含换行符或其他控制字符。"
         }
