@@ -154,7 +154,11 @@ final class FirebasePetResourceService {
     }
 
     private func normalizedPets(_ pets: [PetMetadata]) -> [PetMetadata] {
-        var petsById = Dictionary(uniqueKeysWithValues: pets.map { ($0.id, $0) })
+        var petsById = Dictionary(
+            uniqueKeysWithValues: pets
+                .filter(\.requiredImagesComplete)
+                .map { ($0.id, $0) }
+        )
         petsById[PetMetadata.defaultSimba.id] = petsById[PetMetadata.defaultSimba.id] ?? .defaultSimba
         return petsById.values.sorted { lhs, rhs in
             if lhs.isDefault != rhs.isDefault {
