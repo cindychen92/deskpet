@@ -57,7 +57,7 @@ enum PetMenuBuilder {
             )
             loginItem.submenu = loginMenu
             menu.addItem(loginItem)
-        case .google(let displayName, let email):
+        case .google(_, let displayName, let email):
             let identity = displayName?.nilIfEmpty ?? email?.nilIfEmpty
             let title = identity.map {
                 L10n.format("menu.account.signed_in_as", $0)
@@ -83,6 +83,44 @@ enum PetMenuBuilder {
         to menu: NSMenu
     ) {
         let petsMenu = NSMenu()
+        let publicPets = pets.filter { $0.isPublic || $0.isDefault }
+        let privatePets = pets.filter { !$0.isPublic && !$0.isDefault }
+
+        addPetSection(
+            title: L10n.text("menu.pet.public"),
+            pets: publicPets,
+            activePetId: activePetId,
+            target: target,
+            to: petsMenu
+        )
+        if !publicPets.isEmpty && !privatePets.isEmpty {
+            petsMenu.addItem(.separator())
+        }
+        addPetSection(
+            title: L10n.text("menu.pet.private"),
+            pets: privatePets,
+            activePetId: activePetId,
+            target: target,
+            to: petsMenu
+        )
+
+        let item = NSMenuItem(title: L10n.text("menu.pet.select"), action: nil, keyEquivalent: "")
+        item.submenu = petsMenu
+        menu.addItem(item)
+    }
+
+    private static func addPetSection(
+        title: String,
+        pets: [PetMetadata],
+        activePetId: String,
+        target: AnyObject,
+        to menu: NSMenu
+    ) {
+        guard !pets.isEmpty else { return }
+        let header = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        header.isEnabled = false
+        menu.addItem(header)
+
         for pet in pets {
             let title = pet.requiredImagesComplete
                 ? pet.name
@@ -96,12 +134,8 @@ enum PetMenuBuilder {
             item.representedObject = pet.id
             item.state = pet.id == activePetId ? .on : .off
             item.isEnabled = pet.requiredImagesComplete
-            petsMenu.addItem(item)
+            menu.addItem(item)
         }
-
-        let item = NSMenuItem(title: L10n.text("menu.pet.select"), action: nil, keyEquivalent: "")
-        item.submenu = petsMenu
-        menu.addItem(item)
     }
 
     private static func addMenuItem(

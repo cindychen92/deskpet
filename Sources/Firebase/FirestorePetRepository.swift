@@ -144,6 +144,28 @@ final class FirestorePetRepository {
         }
     }
 
+    func setPetVisibility(
+        _ petId: String,
+        isPublic: Bool,
+        forUserId userId: String,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        database.collection("pets").document(petId).updateData(
+            [
+                "isPublic": isPublic,
+                "updatedAt": FieldValue.serverTimestamp()
+            ]
+        ) { error in
+            DispatchQueue.main.async {
+                if let error {
+                    completion(.failure(error))
+                } else {
+                    completion(.success(()))
+                }
+            }
+        }
+    }
+
     func deletePet(
         _ petId: String,
         forUserId userId: String,

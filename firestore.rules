@@ -24,11 +24,13 @@ service cloud.firestore {
       allow create: if isGoogleUser()
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.isPublic == false
+        && request.resource.data.isPublic is bool
         && request.resource.data.isDefault == false;
 
       allow update: if isGoogleUser()
         && resource.data.ownerUid == request.auth.uid
         && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.isPublic is bool
         && request.resource.data.isDefault == resource.data.isDefault;
 
       allow delete: if isGoogleUser()

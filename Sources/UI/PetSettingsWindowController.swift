@@ -5,6 +5,7 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
     private let resourceService: FirebasePetResourceService
     private let onUploaded: (PetMetadata) -> Void
     private let onRenamed: (PetMetadata) -> Void
+    private let onVisibilityChanged: (PetMetadata) -> Void
     private let onDeleted: (PetMetadata) -> Void
     private let nameField = NSTextField()
     private let statusLabel = NSTextField(labelWithString: "")
@@ -23,11 +24,13 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
         resourceService: FirebasePetResourceService,
         onUploaded: @escaping (PetMetadata) -> Void,
         onRenamed: @escaping (PetMetadata) -> Void,
+        onVisibilityChanged: @escaping (PetMetadata) -> Void,
         onDeleted: @escaping (PetMetadata) -> Void
     ) {
         self.resourceService = resourceService
         self.onUploaded = onUploaded
         self.onRenamed = onRenamed
+        self.onVisibilityChanged = onVisibilityChanged
         self.onDeleted = onDeleted
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 660, height: 720),
@@ -57,7 +60,10 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
         pets: [PetMetadata],
         activePetId: String
     ) {
-        let managedPets = Self.sortedManagedPets(from: pets)
+        let managedPets = Self.sortedManagedPets(
+            from: pets,
+            ownerUserId: accountState.authenticatedUserId
+        )
         guard
             self.accountState != accountState
                 || self.managedPets != managedPets
@@ -225,6 +231,35 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
                     case .failure(let error):
                         self.showStatus(error.localizedDescription, isError: true)
                     }
+                }
+            }
+        }
+    }
+
+    @objc private func togglePetVisibility(_ sender: NSButton) {
+        guard let pet = managedPet(for: sender) else { return }
+        let isPublic = sender.state == .on
+        sender.isEnabled = false
+
+        resourceService.setPetVisibility(pet, isPublic: isPublic) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                switch result {
+                case .success(let updatedPet):
+                    self.upsertManagedPet(updatedPet)
+                    self.window?.contentViewController = self.makeSettingsViewController()
+                    let statusKey = updatedPet.isPublic
+                        ? "settings.status.visibility_public"
+                        : "settings.status.visibility_private"
+                    self.showStatus(
+                        L10n.format(statusKey, updatedPet.name),
+                        isError: false
+                    )
+                    self.onVisibilityChanged(updatedPet)
+                case .failure(let error):
+                    sender.state = pet.isPublic ? .on : .off
+                    sender.isEnabled = true
+                    self.showStatus(error.localizedDescription, isError: true)
                 }
             }
         }
@@ -528,6 +563,15 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
             renameButton.identifier = NSUserInterfaceItemIdentifier(pet.id)
             renameButton.bezelStyle = .rounded
 
+            let visibilitySwitch = NSButton(
+                checkboxWithTitle: L10n.text("settings.manage.public"),
+                target: self,
+                action: #selector(togglePetVisibility(_:))
+            )
+            visibilitySwitch.identifier = NSUserInterfaceItemIdentifier(pet.id)
+            visibilitySwitch.state = pet.isPublic ? .on : .off
+            visibilitySwitch.toolTip = L10n.text("settings.manage.public.help")
+
             let deleteButton = NSButton(
                 title: L10n.text("settings.manage.delete"),
                 target: self,
@@ -537,7 +581,9 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
             deleteButton.bezelStyle = .rounded
             deleteButton.hasDestructiveAction = true
 
-            let row = NSStackView(views: [nameStack, renameButton, deleteButton])
+            let row = NSStackView(
+                views: [nameStack, visibilitySwitch, renameButton, deleteButton]
+            )
             row.orientation = .horizontal
             row.alignment = .centerY
             row.spacing = 8
@@ -686,12 +732,19 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
     private func upsertManagedPet(_ pet: PetMetadata) {
         managedPets.removeAll { $0.id == pet.id }
         managedPets.append(pet)
-        managedPets = Self.sortedManagedPets(from: managedPets)
+        managedPets = Self.sortedManagedPets(
+            from: managedPets,
+            ownerUserId: accountState.authenticatedUserId
+        )
     }
 
-    private static func sortedManagedPets(from pets: [PetMetadata]) -> [PetMetadata] {
-        pets
-            .filter { !$0.isDefault && !$0.isPublic && $0.ownerUid != nil }
+    private static func sortedManagedPets(
+        from pets: [PetMetadata],
+        ownerUserId: String?
+    ) -> [PetMetadata] {
+        guard let ownerUserId else { return [] }
+        return pets
+            .filter { !$0.isDefault && $0.ownerUid == ownerUserId }
             .sorted {
                 $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
             }
