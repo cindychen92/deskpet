@@ -63,10 +63,11 @@ Google 提供商。配置 Google 后重新下载 plist，并确认其中包含 `
 firebase deploy --only firestore:rules,storage
 ```
 
-用户拥有的宠物图片始终位于 `users/<uid>/pets/<pet-id>/`，所有权和可见性相互
-独立。Firestore 文档中的 `isPublic` 控制其他用户能否读取图片，因此切换公开或
-私有状态不需要移动 Storage 文件。使用跨服务 Storage 规则时，Firebase 会提示
-启用读取 Firestore 的服务权限。内置 Simba 可以继续使用 `resources/simba/`。完整验收步骤见
+所有宠物图片都位于 `resources/<pet-id>/`。所有权和可见性不编码在路径中：
+Firestore 文档的 `ownerUid` 标识所有者，`isPublic` 控制其他用户能否读取图片，
+因此切换公开或私有状态不需要移动 Storage 文件。上传时，对象元数据会记录
+`ownerUid` 以安全地授权首次写入和删除。使用跨服务 Storage 规则时，Firebase
+会提示启用读取 Firestore 的服务权限。完整验收步骤见
 [`docs/AUTHENTICATION_CHECKS.md`](docs/AUTHENTICATION_CHECKS.md)。
 
 CI 如果需要 Firebase 远程资源，应在 Xcode 构建前从 secret 写入根目录的 `GoogleService-Info.plist`。不要把真实 plist 或 secret 输出到日志。

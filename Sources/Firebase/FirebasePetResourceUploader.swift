@@ -37,7 +37,7 @@ final class FirebasePetResourceUploader {
         }
 
         let petId = UUID().uuidString.lowercased()
-        let storagePath = "users/\(ownerUserId)/pets/\(petId)"
+        let storagePath = "resources/\(petId)"
         let pet = PetMetadata(
             id: petId,
             name: validatedName,
@@ -57,6 +57,10 @@ final class FirebasePetResourceUploader {
             group.enter()
             let metadata = StorageMetadata()
             metadata.contentType = "image/png"
+            metadata.customMetadata = [
+                "ownerUid": ownerUserId,
+                "petId": petId
+            ]
             Storage.storage()
                 .reference()
                 .child("\(storagePath)/\(name).png")
