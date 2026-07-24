@@ -31,6 +31,8 @@
 		B10000000000000000000012 /* FirebasePetResourceUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000038 /* FirebasePetResourceUploader.swift */; };
 		B10000000000000000000013 /* PetResourceManifest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000039 /* PetResourceManifest.swift */; };
 		B10000000000000000000014 /* PetSettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000003A /* PetSettingsWindowController.swift */; };
+		B10000000000000000000015 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000003B /* Localization.swift */; };
+		B10000000000000000000016 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = B1000000000000000000003C /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -58,6 +60,8 @@
 		B10000000000000000000038 /* FirebasePetResourceUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirebasePetResourceUploader.swift; sourceTree = "<group>"; };
 		B10000000000000000000039 /* PetResourceManifest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetResourceManifest.swift; sourceTree = "<group>"; };
 		B1000000000000000000003A /* PetSettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetSettingsWindowController.swift; sourceTree = "<group>"; };
+		B1000000000000000000003B /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
+		B1000000000000000000003C /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,6 +82,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000032 /* Sources */,
+				B1000000000000000000003C /* Localizable.xcstrings */,
 				A10000000000000000000012 /* Info.plist */,
 				A10000000000000000000014 /* GoogleService-Info.example.plist */,
 				A10000000000000000000034 /* Products */,
@@ -90,6 +95,7 @@
 				B10000000000000000000031 /* App */,
 				B10000000000000000000032 /* Firebase */,
 				B10000000000000000000033 /* PetDomain */,
+				C10000000000000000000001 /* Localization */,
 				B10000000000000000000034 /* Movement */,
 				B10000000000000000000035 /* Rendering */,
 				B10000000000000000000036 /* UI */,
@@ -160,6 +166,14 @@
 			path = UI;
 			sourceTree = "<group>";
 		};
+		C10000000000000000000001 /* Localization */ = {
+			isa = PBXGroup;
+			children = (
+				B1000000000000000000003B /* Localization.swift */,
+			);
+			path = Localization;
+			sourceTree = "<group>";
+		};
 		A10000000000000000000034 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -215,7 +229,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
-				Base,
+				"zh-Hans",
 			);
 			mainGroup = A10000000000000000000031;
 			packageReferences = (
@@ -235,6 +249,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B10000000000000000000016 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -289,6 +304,7 @@
 				B1000000000000000000000E /* PetView.swift in Sources */,
 				B1000000000000000000000F /* PetMenuBuilder.swift in Sources */,
 				B10000000000000000000014 /* PetSettingsWindowController.swift in Sources */,
+				B10000000000000000000015 /* Localization.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

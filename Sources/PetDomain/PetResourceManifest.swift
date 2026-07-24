@@ -2,15 +2,15 @@ import Foundation
 
 enum PetResourceManifest {
     static let requiredImages = [
-        PetResourceRequirement(fileName: "pet-idle", displayName: "平常的样子"),
-        PetResourceRequirement(fileName: "pet-walk-1", displayName: "走路 1"),
-        PetResourceRequirement(fileName: "pet-walk-2", displayName: "走路 2"),
-        PetResourceRequirement(fileName: "pet-walk-3", displayName: "走路 3"),
-        PetResourceRequirement(fileName: "pet-walk-4", displayName: "走路 4"),
-        PetResourceRequirement(fileName: "pet-lie", displayName: "趴下"),
-        PetResourceRequirement(fileName: "pet-sleep", displayName: "睡觉"),
-        PetResourceRequirement(fileName: "pet-eat", displayName: "吃饭"),
-        PetResourceRequirement(fileName: "pet-cuddle", displayName: "撒娇")
+        PetResourceRequirement(fileName: "pet-idle", displayNameKey: "resource.image.idle"),
+        PetResourceRequirement(fileName: "pet-walk-1", displayNameKey: "resource.image.walk.1"),
+        PetResourceRequirement(fileName: "pet-walk-2", displayNameKey: "resource.image.walk.2"),
+        PetResourceRequirement(fileName: "pet-walk-3", displayNameKey: "resource.image.walk.3"),
+        PetResourceRequirement(fileName: "pet-walk-4", displayNameKey: "resource.image.walk.4"),
+        PetResourceRequirement(fileName: "pet-lie", displayNameKey: "resource.image.lie"),
+        PetResourceRequirement(fileName: "pet-sleep", displayNameKey: "resource.image.sleep"),
+        PetResourceRequirement(fileName: "pet-eat", displayNameKey: "resource.image.eat"),
+        PetResourceRequirement(fileName: "pet-cuddle", displayNameKey: "resource.image.cuddle")
     ]
     static let requiredImageNames = requiredImages.map(\.fileName)
 
@@ -31,7 +31,11 @@ enum PetResourceManifest {
 
 struct PetResourceRequirement {
     let fileName: String
-    let displayName: String
+    let displayNameKey: String
+
+    var displayName: String {
+        L10n.text(displayNameKey)
+    }
 }
 
 enum PetNameValidationError: LocalizedError {
@@ -41,9 +45,9 @@ enum PetNameValidationError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .empty:
-            return "请输入宠物名称。"
+            return L10n.text("error.pet_name.empty")
         case .containsControlCharacter:
-            return "宠物名称不能包含换行符或其他控制字符。"
+            return L10n.text("error.pet_name.control_character")
         }
     }
 }

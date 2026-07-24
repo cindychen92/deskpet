@@ -172,7 +172,7 @@ enum FirestorePetRepositoryError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidUploadedPetMetadata:
-            return "Uploaded pet metadata must belong to the current user and have a complete resource set."
+            return L10n.text("error.pet_metadata.invalid")
         }
     }
 }

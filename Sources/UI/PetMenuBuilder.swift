@@ -8,18 +8,20 @@ enum PetMenuBuilder {
         activePetId: String
     ) -> NSMenu {
         let menu = NSMenu()
-        addMenuItem("普通", action: #selector(AppDelegate.setNormal), target: target, to: menu)
-        addMenuItem("趴下", action: #selector(AppDelegate.setLie), target: target, to: menu)
-        addMenuItem("睡觉", action: #selector(AppDelegate.setSleep), target: target, to: menu)
-        addMenuItem("吃饭", action: #selector(AppDelegate.setEat), target: target, to: menu)
-        addMenuItem("撒娇", action: #selector(AppDelegate.setCuddle), target: target, to: menu)
+        addMenuItem(L10n.text("menu.action.normal"), action: #selector(AppDelegate.setNormal), target: target, to: menu)
+        addMenuItem(L10n.text("menu.action.lie"), action: #selector(AppDelegate.setLie), target: target, to: menu)
+        addMenuItem(L10n.text("menu.action.sleep"), action: #selector(AppDelegate.setSleep), target: target, to: menu)
+        addMenuItem(L10n.text("menu.action.eat"), action: #selector(AppDelegate.setEat), target: target, to: menu)
+        addMenuItem(L10n.text("menu.action.cuddle"), action: #selector(AppDelegate.setCuddle), target: target, to: menu)
         menu.addItem(.separator())
-        addMenuItem("摇头", action: #selector(AppDelegate.shakeAction), target: target, to: menu)
-        addMenuItem("跳一跳", action: #selector(AppDelegate.jumpAction), target: target, to: menu)
-        let walkTitle = walkEnabled ? "暂停边缘走动" : "继续边缘走动"
+        addMenuItem(L10n.text("menu.action.shake"), action: #selector(AppDelegate.shakeAction), target: target, to: menu)
+        addMenuItem(L10n.text("menu.action.jump"), action: #selector(AppDelegate.jumpAction), target: target, to: menu)
+        let walkTitle = walkEnabled
+            ? L10n.text("menu.walk.pause")
+            : L10n.text("menu.walk.resume")
         addMenuItem(walkTitle, action: #selector(AppDelegate.toggleWalk), target: target, to: menu)
         menu.addItem(.separator())
-        addMenuItem("宠物设置…", action: #selector(AppDelegate.showPetSettings), target: target, to: menu)
+        addMenuItem(L10n.text("menu.pet_settings"), action: #selector(AppDelegate.showPetSettings), target: target, to: menu)
         addPetSelectionItems(
             pets,
             activePetId: activePetId,
@@ -27,7 +29,7 @@ enum PetMenuBuilder {
             to: menu
         )
         menu.addItem(.separator())
-        addMenuItem("退出桌宠", action: #selector(AppDelegate.quit), target: target, to: menu)
+        addMenuItem(L10n.text("menu.quit"), action: #selector(AppDelegate.quit), target: target, to: menu)
         return menu
     }
 
@@ -39,7 +41,9 @@ enum PetMenuBuilder {
     ) {
         let petsMenu = NSMenu()
         for pet in pets {
-            let title = pet.requiredImagesComplete ? pet.name : "\(pet.name)（资源不完整）"
+            let title = pet.requiredImagesComplete
+                ? pet.name
+                : L10n.format("menu.pet.incomplete", pet.name)
             let item = NSMenuItem(
                 title: title,
                 action: #selector(AppDelegate.selectPetFromMenu(_:)),
@@ -52,7 +56,7 @@ enum PetMenuBuilder {
             petsMenu.addItem(item)
         }
 
-        let item = NSMenuItem(title: "选择宠物", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: L10n.text("menu.pet.select"), action: nil, keyEquivalent: "")
         item.submenu = petsMenu
         menu.addItem(item)
     }

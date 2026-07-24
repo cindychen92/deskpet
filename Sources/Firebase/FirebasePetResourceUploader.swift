@@ -102,13 +102,21 @@ enum FirebasePetResourceUploadError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .firebaseNotConfigured:
-            return "Firebase 尚未配置，无法上传宠物图片。"
+            return L10n.text("error.firebase.not_configured")
         case .missingImages(let names):
-            return "仍缺少图片：\(names.map { PetResourceManifest.displayName(for: $0) }.joined(separator: "、"))"
+            let displayNames = names.map { PetResourceManifest.displayName(for: $0) }
+            return L10n.format("error.resource.missing_images", L10n.list(displayNames))
         case .invalidPNG(let name):
-            return "“\(PetResourceManifest.displayName(for: name))”不是可读取的 PNG 图片。"
+            return L10n.format(
+                "error.resource.invalid_png",
+                PetResourceManifest.displayName(for: name)
+            )
         case .uploadFailed(let resourceName, let underlying):
-            return "“\(PetResourceManifest.displayName(for: resourceName))”上传失败：\(underlying.localizedDescription)"
+            return L10n.format(
+                "error.resource.upload_failed",
+                PetResourceManifest.displayName(for: resourceName),
+                underlying.localizedDescription
+            )
         }
     }
 }

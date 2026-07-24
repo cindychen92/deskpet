@@ -65,6 +65,7 @@ CI 如果需要 Firebase 远程资源，应在 Xcode 构建前从 secret 写入�
 Sources/
   App/         应用入口、AppDelegate、窗口生命周期
   Firebase/    Firebase 配置、匿名认证、远程资源加载与缓存
+  Localization/ 本地化查询和区域格式化工具
   PetDomain/   桌宠状态、动作、动画时序与状态机
   Movement/    位置缓动和移动基础逻辑
   Rendering/   PetView、绘制、资源加载协议和交互回调
@@ -75,6 +76,19 @@ Info.plist     macOS 应用配置
 GoogleService-Info.example.plist  Firebase 配置模板
 build.sh       本地构建脚本
 ```
+
+## 本地化
+
+应用以英语（`en`）为开发语言，并提供简体中文（`zh-Hans`）翻译。所有由应用提供的用户可见文本都保存在根目录的 `Localizable.xcstrings` 字符串目录中。代码使用稳定的语义 key（例如 `menu.action.sleep`），并通过 `L10n` 查询。请勿在 Swift 文件中直接加入用户可见文本。
+
+新增或修改文本时：
+
+1. 在 `Localizable.xcstrings` 中加入稳定、描述用途而不是英语措辞的 key。
+2. 提供英语值和必要的翻译注释；包含参数的值使用带位置的格式说明符，例如 `%1$@`。
+3. 在代码中使用 `L10n.text`；需要参数时使用 `L10n.format`，数字使用 `L10n.integer`，列表使用 `L10n.list`。
+4. 不要把文件名、Firebase collection 名、日志或其他内部标识加入字符串目录。
+
+某个语言缺少翻译时，Bundle 会回退到开发语言英语，因此不会显示原始 key。验证本地化时，在 Xcode scheme 的 Run > Options > App Language 中分别选择 `Simplified Chinese` 和 `Double-Length Pseudolanguage`，然后检查右键菜单、宠物对话气泡、设置窗口、文件选择器、错误状态、数字和列表。再使用 `System Language` 运行一次，确认英语基准值正常显示且较长文本没有截断。
 
 ## 说明
 

@@ -53,7 +53,7 @@ final class PetView: NSView, PetResourcePresenting {
             else {
                 return
             }
-            self.say("宠物图片加载失败，已显示备用图。")
+            self.say(L10n.text("error.pet.image_load"))
         }
     }
 
@@ -249,7 +249,12 @@ final class PetView: NSView, PetResourcePresenting {
         let moonRect = NSRect(x: rect.maxX - 42, y: rect.maxY - 10, width: 26, height: 26)
         NSColor(calibratedRed: 1.0, green: 0.83, blue: 0.35, alpha: 0.9).setFill()
         NSBezierPath(ovalIn: moonRect).fill()
-        drawText("Zzz", at: NSPoint(x: moonRect.maxX - 2, y: moonRect.maxY - 2), size: 18, color: NSColor.systemBlue)
+        drawText(
+            L10n.text("effect.sleep"),
+            at: NSPoint(x: moonRect.maxX - 2, y: moonRect.maxY - 2),
+            size: 18,
+            color: NSColor.systemBlue
+        )
     }
 
     private func drawHearts(near rect: NSRect) {
