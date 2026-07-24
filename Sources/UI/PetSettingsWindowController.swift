@@ -7,9 +7,11 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
     private let nameField = NSTextField()
     private let statusLabel = NSTextField(labelWithString: "")
     private let uploadButton = NSButton()
+    private let resourcesLabel = NSTextField(labelWithString: "")
     private var selectedFiles: [String: URL] = [:]
     private var resourceStatusLabels: [String: NSTextField] = [:]
-    private var selectionButtons: [NSButton] = []
+    private var resourceStatusIcons: [String: NSImageView] = [:]
+    private var selectionButtons: [String: NSButton] = [:]
     private var isUploading = false
 
     init(
@@ -67,8 +69,7 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
             }
 
             self.selectedFiles[resourceName] = url
-            self.resourceStatusLabels[resourceName]?.stringValue = url.lastPathComponent
-            self.resourceStatusLabels[resourceName]?.textColor = .labelColor
+            self.updateSelectionState(for: resourceName, fileURL: url)
             self.statusLabel.stringValue = ""
             self.updateUploadButton()
         }
@@ -127,8 +128,8 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
         nameStack.spacing = 14
         nameLabel.setContentHuggingPriority(.required, for: .horizontal)
 
-        let resourcesLabel = NSTextField(labelWithString: "必需图片")
         resourcesLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        updateResourcesLabel()
 
         let resourcesStack = NSStackView()
         resourcesStack.orientation = .vertical
@@ -140,6 +141,18 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
             let fileLabel = NSTextField(labelWithString: requirement.displayName)
             fileLabel.font = .systemFont(ofSize: 13, weight: .regular)
             fileLabel.widthAnchor.constraint(equalToConstant: 155).isActive = true
+
+            let statusIcon = NSImageView(
+                image: NSImage(
+                    systemSymbolName: "circle",
+                    accessibilityDescription: "尚未选择"
+                ) ?? NSImage()
+            )
+            statusIcon.contentTintColor = .tertiaryLabelColor
+            statusIcon.symbolConfiguration = .init(pointSize: 13, weight: .medium)
+            statusIcon.widthAnchor.constraint(equalToConstant: 18).isActive = true
+            statusIcon.heightAnchor.constraint(equalToConstant: 18).isActive = true
+            resourceStatusIcons[resourceName] = statusIcon
 
             let selectedLabel = NSTextField(labelWithString: "尚未选择")
             selectedLabel.lineBreakMode = .byTruncatingMiddle
@@ -156,9 +169,10 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
             button.image = NSImage(systemSymbolName: "folder", accessibilityDescription: "选择图片")
             button.imagePosition = .imageLeading
             button.bezelStyle = .rounded
-            selectionButtons.append(button)
+            button.widthAnchor.constraint(equalToConstant: 92).isActive = true
+            selectionButtons[resourceName] = button
 
-            let row = NSStackView(views: [fileLabel, selectedLabel, button])
+            let row = NSStackView(views: [fileLabel, statusIcon, selectedLabel, button])
             row.orientation = .horizontal
             row.alignment = .centerY
             row.spacing = 12
@@ -227,19 +241,38 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
         uploadButton.isEnabled = hasValidName && hasAllImages && !isUploading
     }
 
+    private func updateSelectionState(for resourceName: String, fileURL: URL?) {
+        let isSelected = fileURL != nil
+        resourceStatusLabels[resourceName]?.stringValue = fileURL?.lastPathComponent ?? "尚未选择"
+        resourceStatusLabels[resourceName]?.textColor = isSelected ? .labelColor : .secondaryLabelColor
+
+        let iconName = isSelected ? "checkmark.circle.fill" : "circle"
+        resourceStatusIcons[resourceName]?.image = NSImage(
+            systemSymbolName: iconName,
+            accessibilityDescription: isSelected ? "已选择" : "尚未选择"
+        )
+        resourceStatusIcons[resourceName]?.contentTintColor = isSelected ? .systemGreen : .tertiaryLabelColor
+
+        selectionButtons[resourceName]?.title = isSelected ? "更换…" : "选择…"
+        updateResourcesLabel()
+    }
+
+    private func updateResourcesLabel() {
+        resourcesLabel.stringValue = "必需图片（已选择 \(selectedFiles.count)/\(PetResourceManifest.requiredImages.count)）"
+    }
+
     private func setUploading(_ uploading: Bool) {
         isUploading = uploading
         nameField.isEnabled = !uploading
-        selectionButtons.forEach { $0.isEnabled = !uploading }
+        selectionButtons.values.forEach { $0.isEnabled = !uploading }
         uploadButton.title = uploading ? "正在上传…" : "上传并使用"
         updateUploadButton()
     }
 
     private func clearSelectedFiles() {
         selectedFiles.removeAll()
-        for label in resourceStatusLabels.values {
-            label.stringValue = "尚未选择"
-            label.textColor = .secondaryLabelColor
+        for resourceName in PetResourceManifest.requiredImageNames {
+            updateSelectionState(for: resourceName, fileURL: nil)
         }
         updateUploadButton()
     }
