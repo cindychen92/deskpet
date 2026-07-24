@@ -6,6 +6,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
     private var petView: PetView!
     private let resourceLoader = FirebasePetResourceLoader()
     private let resourceService = FirebasePetResourceService()
+    private lazy var settingsWindowController = PetSettingsWindowController(
+        resourceService: resourceService
+    ) { [weak self] pet in
+        self?.handleUploadedPet(pet)
+    }
     private var availablePets: [PetMetadata] = [.defaultSimba]
     private var activePet: PetMetadata = .defaultSimba
     private var updateTimer: Timer?
@@ -309,6 +314,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
         NSApp.terminate(nil)
     }
 
+    @objc func showPetSettings() {
+        settingsWindowController.showWindow(nil)
+    }
+
     @objc func selectPetFromMenu(_ sender: NSMenuItem) {
         guard
             let petId = sender.representedObject as? String,
@@ -331,6 +340,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
                 case .failure(let error):
                     NSLog("Unable to save active pet selection: \(error.localizedDescription)")
                     self?.petView.say("宠物选择保存失败。")
+                }
+            }
+        }
+    }
+
+    private func handleUploadedPet(_ pet: PetMetadata) {
+        availablePets.removeAll { $0.id == pet.id }
+        availablePets.append(pet)
+        availablePets.sort { lhs, rhs in
+            if lhs.isDefault != rhs.isDefault {
+                return lhs.isDefault
+            }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+        applyActivePet(pet, announcement: nil)
+
+        resourceService.selectPet(pet) { [weak self] result in
+            DispatchQueue.main.async {
+                if case .failure(let error) = result {
+                    NSLog("Unable to save uploaded pet selection: \(error.localizedDescription)")
+                    self?.petView.say("宠物已上传，但当前选择保存失败。")
                 }
             }
         }

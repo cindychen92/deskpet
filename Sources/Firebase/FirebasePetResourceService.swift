@@ -3,10 +3,15 @@ import FirebaseAuth
 
 final class FirebasePetResourceService {
     private var repository: FirestorePetRepository?
+    private let uploader: FirebasePetResourceUploader
     private var currentUserId: String?
 
-    init(repository: FirestorePetRepository? = nil) {
+    init(
+        repository: FirestorePetRepository? = nil,
+        uploader: FirebasePetResourceUploader = FirebasePetResourceUploader()
+    ) {
         self.repository = repository
+        self.uploader = uploader
     }
 
     func configureIfNeeded() {
@@ -101,6 +106,38 @@ final class FirebasePetResourceService {
             return
         }
         petRepository.saveUploadedPet(pet, forUserId: currentUserId, completion: completion)
+    }
+
+    func uploadPet(
+        named name: String,
+        files: [String: URL],
+        completion: @escaping (Result<PetMetadata, Error>) -> Void
+    ) {
+        guard let currentUserId, !currentUserId.isEmpty else {
+            completion(.failure(FirebasePetResourceServiceError.missingCurrentUser))
+            return
+        }
+
+        uploader.upload(
+            petName: name,
+            ownerUserId: currentUserId,
+            files: files
+        ) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let pet):
+                self.saveUploadedPetMetadata(pet) { metadataResult in
+                    switch metadataResult {
+                    case .success:
+                        completion(.success(pet))
+                    case .failure(let error):
+                        completion(.failure(error))
+                    }
+                }
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
     }
 
     private func loadPets(
@@ -204,7 +241,7 @@ enum FirebasePetResourceServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingCurrentUser:
-            return "No signed-in Firebase user is available."
+            return "Firebase 用户尚未登录，暂时无法上传宠物资源。"
         }
     }
 }

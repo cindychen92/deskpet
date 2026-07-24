@@ -19,6 +19,7 @@ enum PetMenuBuilder {
         let walkTitle = walkEnabled ? "暂停边缘走动" : "继续边缘走动"
         addMenuItem(walkTitle, action: #selector(AppDelegate.toggleWalk), target: target, to: menu)
         menu.addItem(.separator())
+        addMenuItem("宠物设置…", action: #selector(AppDelegate.showPetSettings), target: target, to: menu)
         addPetSelectionItems(
             pets,
             activePetId: activePetId,
