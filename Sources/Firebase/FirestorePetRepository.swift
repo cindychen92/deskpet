@@ -12,7 +12,7 @@ final class FirestorePetRepository {
         forUserId userId: String,
         completion: @escaping (Result<([PetMetadata], String?), Error>) -> Void
     ) {
-        var loadedPets: [PetMetadata] = []
+        var loadedPets: [PetMetadata]?
         var activePetId: String?
         var firstError: Error?
         let lock = NSLock()
@@ -20,7 +20,6 @@ final class FirestorePetRepository {
 
         group.enter()
         database.collection("pets")
-            .whereField("isDefault", isEqualTo: true)
             .getDocuments { snapshot, error in
                 defer { group.leave() }
                 if let error {
@@ -31,24 +30,7 @@ final class FirestorePetRepository {
                 }
                 let pets = snapshot?.documents.compactMap(Self.makePetMetadata) ?? []
                 lock.lock()
-                loadedPets.append(contentsOf: pets)
-                lock.unlock()
-            }
-
-        group.enter()
-        database.collection("pets")
-            .whereField("ownerUid", isEqualTo: userId)
-            .getDocuments { snapshot, error in
-                defer { group.leave() }
-                if let error {
-                    lock.lock()
-                    firstError = firstError ?? error
-                    lock.unlock()
-                    return
-                }
-                let pets = snapshot?.documents.compactMap(Self.makePetMetadata) ?? []
-                lock.lock()
-                loadedPets.append(contentsOf: pets)
+                loadedPets = pets
                 lock.unlock()
             }
 
@@ -67,7 +49,7 @@ final class FirestorePetRepository {
         }
 
         group.notify(queue: .main) {
-            let pets = Self.deduplicate(loadedPets)
+            let pets = Self.deduplicate(loadedPets ?? [])
             if let firstError, pets.isEmpty {
                 completion(.failure(firstError))
                 return

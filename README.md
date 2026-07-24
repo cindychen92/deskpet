@@ -78,4 +78,4 @@ build.sh       本地构建脚本
 
 ## 说明
 
-桌宠列表、默认 `simba` 宠物、用户自定义宠物和当前选中的宠物 ID 由 Firestore 管理。实际 PNG 图片仍存放在 Firebase Storage 中，应用会按选中宠物文档里的 `storagePath` 加载并缓存图片；如果 Firestore 不可用或资源不完整，会回退到默认 `simba` 或备用绘制。
+桌宠列表、默认 `simba` 宠物、所有可选宠物和当前选中的宠物 ID 由 Firestore 管理。实际 PNG 图片仍存放在 Firebase Storage 中，应用会按选中宠物文档里的 `storagePath` 加载并缓存图片；如果 Firestore 不可用或资源不完整，会回退到默认 `simba` 或备用绘制。
