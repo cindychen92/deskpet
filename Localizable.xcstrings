@@ -872,6 +872,40 @@
         }
       }
     },
+    "menu.pet.private" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private Pets"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "私有宠物"
+          }
+        }
+      }
+    },
+    "menu.pet.public" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Public Pets"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公开宠物"
+          }
+        }
+      }
+    },
     "menu.pet.select" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1314,6 +1348,40 @@
         }
       }
     },
+    "settings.manage.public" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Public"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公开"
+          }
+        }
+      }
+    },
+    "settings.manage.public.help" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow everyone to discover and use this pet."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许所有人发现并使用这个宠物。"
+          }
+        }
+      }
+    },
     "settings.manage.rename" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1532,6 +1600,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在上传 %1$@…"
+          }
+        }
+      }
+    },
+    "settings.status.visibility_private" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ is now private."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 现已设为私有。"
+          }
+        }
+      }
+    },
+    "settings.status.visibility_public" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ is now public."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 现已公开。"
           }
         }
       }

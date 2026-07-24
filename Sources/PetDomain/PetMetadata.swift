@@ -33,6 +33,19 @@ struct PetMetadata: Equatable {
             isPublic: isPublic
         )
     }
+
+    func withPublicVisibility(_ isPublic: Bool) -> PetMetadata {
+        PetMetadata(
+            id: id,
+            name: name,
+            slug: slug,
+            ownerUid: ownerUid,
+            storagePath: storagePath,
+            requiredImagesComplete: requiredImagesComplete,
+            isDefault: isDefault,
+            isPublic: isPublic
+        )
+    }
 }
 
 struct PetSelectionState {
@@ -45,12 +58,17 @@ struct PetSelectionState {
 enum PetAccountState: Equatable {
     case unavailable
     case anonymous
-    case google(displayName: String?, email: String?)
+    case google(userId: String, displayName: String?, email: String?)
 
     var canUploadPrivatePets: Bool {
         if case .google = self {
             return true
         }
         return false
+    }
+
+    var authenticatedUserId: String? {
+        guard case .google(let userId, _, _) = self else { return nil }
+        return userId
     }
 }

@@ -267,6 +267,30 @@ final class FirebasePetResourceService {
         }
     }
 
+    func setPetVisibility(
+        _ pet: PetMetadata,
+        isPublic: Bool,
+        completion: @escaping (Result<PetMetadata, Error>) -> Void
+    ) {
+        guard let userId = ownerUserId(for: pet) else {
+            completion(.failure(FirebasePetResourceServiceError.petNotManageable))
+            return
+        }
+
+        petRepository.setPetVisibility(
+            pet.id,
+            isPublic: isPublic,
+            forUserId: userId
+        ) { result in
+            switch result {
+            case .success:
+                completion(.success(pet.withPublicVisibility(isPublic)))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
     func deletePet(
         _ pet: PetMetadata,
         completion: @escaping (Result<Void, Error>) -> Void
@@ -464,7 +488,6 @@ final class FirebasePetResourceService {
     private func ownerUserId(for pet: PetMetadata) -> String? {
         guard
             !pet.isDefault,
-            !pet.isPublic,
             let currentUserId,
             pet.ownerUid == currentUserId,
             Self.accountState(for: Auth.auth().currentUser).canUploadPrivatePets
@@ -480,7 +503,11 @@ final class FirebasePetResourceService {
         guard user.providerData.contains(where: { $0.providerID == "google.com" }) else {
             return .anonymous
         }
-        return .google(displayName: user.displayName, email: user.email)
+        return .google(
+            userId: user.uid,
+            displayName: user.displayName,
+            email: user.email
+        )
     }
 }
 

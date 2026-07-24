@@ -16,6 +16,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
         onRenamed: { [weak self] pet in
             self?.handleRenamedPet(pet)
         },
+        onVisibilityChanged: { [weak self] pet in
+            self?.handleRenamedPet(pet)
+        },
         onDeleted: { [weak self] pet in
             self?.handleDeletedPet(pet)
         }
