@@ -47,7 +47,7 @@ final class FirebasePetResourceService {
                     "Firebase anonymous sign-in failed: domain=\(nsError.domain) code=\(nsError.code) description=\(nsError.localizedDescription) userInfo=\(nsError.userInfo)"
                 )
                 DispatchQueue.main.async {
-                    onError("云端宠物列表暂时不可用，已切回默认 Simba。")
+                    onError(L10n.text("error.pet_list.unavailable"))
                     onLoaded(
                         PetSelectionState(
                             currentUserId: "",
@@ -60,7 +60,7 @@ final class FirebasePetResourceService {
             }
             guard let self, let userId = result?.user.uid else {
                 DispatchQueue.main.async {
-                    onError("云端宠物列表暂时不可用，已切回默认 Simba。")
+                    onError(L10n.text("error.pet_list.unavailable"))
                     onLoaded(
                         PetSelectionState(
                             currentUserId: "",
@@ -153,7 +153,7 @@ final class FirebasePetResourceService {
                     in: normalizedPets,
                     preferredPetId: activePetId
                 ) else {
-                    onError("宠物资源列表不完整，已切回默认 Simba。")
+                    onError(L10n.text("error.pet_list.incomplete"))
                     onLoaded(
                         PetSelectionState(
                             currentUserId: userId,
@@ -178,7 +178,7 @@ final class FirebasePetResourceService {
 
             case .failure(let error):
                 NSLog("Unable to load Firestore pet metadata: \(error.localizedDescription)")
-                onError("云端宠物列表暂时不可用，已切回默认 Simba。")
+                onError(L10n.text("error.pet_list.unavailable"))
                 onLoaded(
                     PetSelectionState(
                         currentUserId: userId,
@@ -241,7 +241,7 @@ enum FirebasePetResourceServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingCurrentUser:
-            return "Firebase 用户尚未登录，暂时无法上传宠物资源。"
+            return L10n.text("error.firebase.missing_user")
         }
     }
 }

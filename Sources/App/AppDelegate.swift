@@ -216,16 +216,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
     func petWasTapped() {
         switch stateMachine.queuedOrCurrentState {
         case .walking, .idle:
-            requestAction(PetAction(state: .lie, speech: "我趴好啦。"))
+            requestAction(PetAction(state: .lie, speech: L10n.text("speech.lie.tap")))
         case .lie:
-            requestAction(PetAction(state: .sleep, speech: "困困。"))
+            requestAction(PetAction(state: .sleep, speech: L10n.text("speech.sleep.tap")))
         case .sleep:
-            requestAction(PetAction(state: .eat, speech: "开饭啦！"))
+            requestAction(PetAction(state: .eat, speech: L10n.text("speech.eat")))
         case .eat:
-            requestAction(PetAction(state: .cuddle, speech: "贴贴时间到。", shakeOnEnter: true))
+            requestAction(
+                PetAction(
+                    state: .cuddle,
+                    speech: L10n.text("speech.cuddle"),
+                    shakeOnEnter: true
+                )
+            )
         case .cuddle:
             walkEnabled = true
-            requestAction(PetAction(state: .walking, speech: "继续巡逻。", jumpOnEnter: true))
+            requestAction(
+                PetAction(
+                    state: .walking,
+                    speech: L10n.text("speech.walk.resume"),
+                    jumpOnEnter: true
+                )
+            )
         }
     }
 
@@ -272,41 +284,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
 
     @objc func setNormal() {
         walkEnabled = true
-        requestAction(PetAction(state: .walking, speech: "我回来了。", jumpOnEnter: true))
+        requestAction(
+            PetAction(
+                state: .walking,
+                speech: L10n.text("speech.normal"),
+                jumpOnEnter: true
+            )
+        )
     }
 
     @objc func setLie() {
-        requestAction(PetAction(state: .lie, speech: "我趴好啦。"))
+        requestAction(PetAction(state: .lie, speech: L10n.text("speech.lie.action")))
     }
 
     @objc func setSleep() {
-        requestAction(PetAction(state: .sleep, speech: "先睡一小会儿。"))
+        requestAction(PetAction(state: .sleep, speech: L10n.text("speech.sleep.action")))
     }
 
     @objc func setEat() {
-        requestAction(PetAction(state: .eat, speech: "开饭啦！"))
+        requestAction(PetAction(state: .eat, speech: L10n.text("speech.eat")))
     }
 
     @objc func setCuddle() {
-        requestAction(PetAction(state: .cuddle, speech: "贴贴时间到。", shakeOnEnter: true))
+        requestAction(
+            PetAction(
+                state: .cuddle,
+                speech: L10n.text("speech.cuddle"),
+                shakeOnEnter: true
+            )
+        )
     }
 
     @objc func jumpAction() {
-        petView.say("起飞！")
+        petView.say(L10n.text("speech.jump"))
         triggerJump()
     }
 
     @objc func shakeAction() {
-        petView.say("听到了！")
+        petView.say(L10n.text("speech.shake"))
         triggerShake()
     }
 
     @objc func toggleWalk() {
         walkEnabled.toggle()
         if walkEnabled {
-            requestAction(PetAction(state: .walking, speech: "继续巡逻。"))
+            requestAction(PetAction(state: .walking, speech: L10n.text("speech.walk.resume")))
         } else {
-            requestAction(PetAction(state: .idle, speech: "我先站会儿。"))
+            requestAction(PetAction(state: .idle, speech: L10n.text("speech.walk.pause")))
         }
     }
 
@@ -323,12 +347,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
             let petId = sender.representedObject as? String,
             let pet = availablePets.first(where: { $0.id == petId })
         else {
-            petView.say("没有找到这个宠物。")
+            petView.say(L10n.text("error.pet.not_found"))
             return
         }
 
         guard pet.requiredImagesComplete else {
-            petView.say("这个宠物的图片还不完整。")
+            petView.say(L10n.text("error.pet.incomplete"))
             return
         }
 
@@ -336,10 +360,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let selectedPet):
-                    self?.applyActivePet(selectedPet, announcement: "已切换到 \(selectedPet.name)。")
+                    self?.applyActivePet(
+                        selectedPet,
+                        announcement: L10n.format("speech.pet.switched", selectedPet.name)
+                    )
                 case .failure(let error):
                     NSLog("Unable to save active pet selection: \(error.localizedDescription)")
-                    self?.petView.say("宠物选择保存失败。")
+                    self?.petView.say(L10n.text("error.pet.selection_save"))
                 }
             }
         }
@@ -360,7 +387,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
             DispatchQueue.main.async {
                 if case .failure(let error) = result {
                     NSLog("Unable to save uploaded pet selection: \(error.localizedDescription)")
-                    self?.petView.say("宠物已上传，但当前选择保存失败。")
+                    self?.petView.say(L10n.text("error.pet.uploaded_selection_save"))
                 }
             }
         }

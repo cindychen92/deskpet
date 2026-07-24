@@ -27,7 +27,7 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
             defer: false
         )
         super.init(window: window)
-        window.title = "宠物设置"
+        window.title = L10n.text("settings.window.title")
         window.isReleasedWhenClosed = false
         window.center()
         window.contentViewController = makeContentViewController()
@@ -56,7 +56,7 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
-        panel.message = "选择“\(displayName)”图片"
+        panel.message = L10n.format("settings.file_picker.message", displayName)
 
         panel.beginSheetModal(for: window) { [weak self] response in
             guard let self, response == .OK, let url = panel.url else { return }
@@ -64,7 +64,10 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
                 url.pathExtension.lowercased() == "png",
                 NSImage(contentsOf: url) != nil
             else {
-                self.showStatus("“\(displayName)”必须是可读取的 PNG 图片。", isError: true)
+                self.showStatus(
+                    L10n.format("error.resource.invalid_png", displayName),
+                    isError: true
+                )
                 return
             }
 
@@ -87,19 +90,22 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
 
         let missingNames = PetResourceManifest.requiredImageNames.filter { selectedFiles[$0] == nil }
         guard missingNames.isEmpty else {
-            showStatus("请先选择全部必需图片。", isError: true)
+            showStatus(L10n.text("settings.error.select_all_images"), isError: true)
             return
         }
 
         setUploading(true)
-        showStatus("正在上传 \(petName)…", isError: false)
+        showStatus(L10n.format("settings.status.uploading_pet", petName), isError: false)
         resourceService.uploadPet(named: petName, files: selectedFiles) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.setUploading(false)
                 switch result {
                 case .success(let pet):
-                    self.showStatus("\(pet.name) 上传完成，已切换为当前宠物。", isError: false)
+                    self.showStatus(
+                        L10n.format("settings.status.upload_complete", pet.name),
+                        isError: false
+                    )
                     self.onUploaded(pet)
                     self.clearSelectedFiles()
                 case .failure(let error):
@@ -114,12 +120,12 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
         let contentView = NSView()
         viewController.view = contentView
 
-        let titleLabel = NSTextField(labelWithString: "管理宠物资源")
+        let titleLabel = NSTextField(labelWithString: L10n.text("settings.heading"))
         titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
 
-        let nameLabel = NSTextField(labelWithString: "宠物名称")
+        let nameLabel = NSTextField(labelWithString: L10n.text("settings.pet_name.label"))
         nameLabel.font = .systemFont(ofSize: 13, weight: .medium)
-        nameField.placeholderString = "例如：Ginger、我的小狗、🐶"
+        nameField.placeholderString = L10n.text("settings.pet_name.placeholder")
         nameField.delegate = self
 
         let nameStack = NSStackView(views: [nameLabel, nameField])
@@ -145,7 +151,7 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
             let statusIcon = NSImageView(
                 image: NSImage(
                     systemSymbolName: "circle",
-                    accessibilityDescription: "尚未选择"
+                    accessibilityDescription: L10n.text("accessibility.resource.not_selected")
                 ) ?? NSImage()
             )
             statusIcon.contentTintColor = .tertiaryLabelColor
@@ -154,19 +160,24 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
             statusIcon.heightAnchor.constraint(equalToConstant: 18).isActive = true
             resourceStatusIcons[resourceName] = statusIcon
 
-            let selectedLabel = NSTextField(labelWithString: "尚未选择")
+            let selectedLabel = NSTextField(
+                labelWithString: L10n.text("settings.resource.not_selected")
+            )
             selectedLabel.lineBreakMode = .byTruncatingMiddle
             selectedLabel.textColor = .secondaryLabelColor
             selectedLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             resourceStatusLabels[resourceName] = selectedLabel
 
             let button = NSButton(
-                title: "选择…",
+                title: L10n.text("settings.resource.choose"),
                 target: self,
                 action: #selector(chooseImage(_:))
             )
             button.identifier = NSUserInterfaceItemIdentifier(resourceName)
-            button.image = NSImage(systemSymbolName: "folder", accessibilityDescription: "选择图片")
+            button.image = NSImage(
+                systemSymbolName: "folder",
+                accessibilityDescription: L10n.text("accessibility.resource.choose_image")
+            )
             button.imagePosition = .imageLeading
             button.bezelStyle = .rounded
             button.widthAnchor.constraint(equalToConstant: 92).isActive = true
@@ -183,7 +194,7 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
         statusLabel.maximumNumberOfLines = 2
         statusLabel.lineBreakMode = .byWordWrapping
 
-        uploadButton.title = "上传并使用"
+        uploadButton.title = L10n.text("settings.upload")
         uploadButton.target = self
         uploadButton.action = #selector(uploadPet)
         uploadButton.bezelStyle = .rounded
@@ -243,29 +254,40 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
 
     private func updateSelectionState(for resourceName: String, fileURL: URL?) {
         let isSelected = fileURL != nil
-        resourceStatusLabels[resourceName]?.stringValue = fileURL?.lastPathComponent ?? "尚未选择"
+        resourceStatusLabels[resourceName]?.stringValue = fileURL?.lastPathComponent
+            ?? L10n.text("settings.resource.not_selected")
         resourceStatusLabels[resourceName]?.textColor = isSelected ? .labelColor : .secondaryLabelColor
 
         let iconName = isSelected ? "checkmark.circle.fill" : "circle"
         resourceStatusIcons[resourceName]?.image = NSImage(
             systemSymbolName: iconName,
-            accessibilityDescription: isSelected ? "已选择" : "尚未选择"
+            accessibilityDescription: isSelected
+                ? L10n.text("accessibility.resource.selected")
+                : L10n.text("accessibility.resource.not_selected")
         )
         resourceStatusIcons[resourceName]?.contentTintColor = isSelected ? .systemGreen : .tertiaryLabelColor
 
-        selectionButtons[resourceName]?.title = isSelected ? "更换…" : "选择…"
+        selectionButtons[resourceName]?.title = isSelected
+            ? L10n.text("settings.resource.replace")
+            : L10n.text("settings.resource.choose")
         updateResourcesLabel()
     }
 
     private func updateResourcesLabel() {
-        resourcesLabel.stringValue = "必需图片（已选择 \(selectedFiles.count)/\(PetResourceManifest.requiredImages.count)）"
+        resourcesLabel.stringValue = L10n.format(
+            "settings.resources.progress",
+            L10n.integer(selectedFiles.count),
+            L10n.integer(PetResourceManifest.requiredImages.count)
+        )
     }
 
     private func setUploading(_ uploading: Bool) {
         isUploading = uploading
         nameField.isEnabled = !uploading
         selectionButtons.values.forEach { $0.isEnabled = !uploading }
-        uploadButton.title = uploading ? "正在上传…" : "上传并使用"
+        uploadButton.title = uploading
+            ? L10n.text("settings.upload.in_progress")
+            : L10n.text("settings.upload")
         updateUploadButton()
     }
 
