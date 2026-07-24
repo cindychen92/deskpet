@@ -1,4 +1,6 @@
 import Cocoa
+import Carbon
+import GoogleSignIn
 import QuartzCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
@@ -7,12 +9,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
     private let resourceLoader = FirebasePetResourceLoader()
     private let resourceService = FirebasePetResourceService()
     private lazy var settingsWindowController = PetSettingsWindowController(
-        resourceService: resourceService
-    ) { [weak self] pet in
-        self?.handleUploadedPet(pet)
-    }
+        resourceService: resourceService,
+        onUploaded: { [weak self] pet in
+            self?.handleUploadedPet(pet)
+        },
+        onRenamed: { [weak self] pet in
+            self?.handleRenamedPet(pet)
+        },
+        onDeleted: { [weak self] pet in
+            self?.handleDeletedPet(pet)
+        }
+    )
     private var availablePets: [PetMetadata] = [.defaultSimba]
     private var activePet: PetMetadata = .defaultSimba
+    private var accountState: PetAccountState = .unavailable
     private var updateTimer: Timer?
     private var lastUpdateTime: CFTimeInterval = CACurrentMediaTime()
     private let stateMachine = PetStateMachine(initial: PetAction(state: .walking))
@@ -29,6 +39,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
     private var nextPauseRemaining: CGFloat = 0
     func applicationDidFinishLaunching(_ notification: Notification) {
         resourceService.configureIfNeeded()
+        NSAppleEventManager.shared().setEventHandler(
+            self,
+            andSelector: #selector(handleGetURLEvent(event:replyEvent:)),
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL)
+        )
         NSApp.setActivationPolicy(.accessory)
         createWindow()
         loadPetMetadata()
@@ -37,6 +53,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
         }
         scheduleNextPause()
         startTimers()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        NSAppleEventManager.shared().removeEventHandler(
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL)
+        )
+    }
+
+    @objc private func handleGetURLEvent(
+        event: NSAppleEventDescriptor?,
+        replyEvent: NSAppleEventDescriptor?
+    ) {
+        guard
+            let urlString = event?
+                .paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?
+                .stringValue,
+            let url = URL(string: urlString)
+        else {
+            return
+        }
+        GIDSignIn.sharedInstance.handle(url)
     }
 
     private func createWindow() {
@@ -254,7 +292,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
             target: self,
             walkEnabled: walkEnabled,
             pets: availablePets,
-            activePetId: activePet.id
+            activePetId: activePet.id,
+            accountState: accountState
         )
         NSMenu.popUpContextMenu(menu, with: event, for: petView)
     }
@@ -263,8 +302,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
         resourceService.authenticateAndLoadPets(
             onLoaded: { [weak self] selection in
                 guard let self else { return }
+                self.accountState = selection.accountState
                 self.availablePets = selection.pets
                 self.applyActivePet(selection.activePet, announcement: nil)
+                self.syncSettingsState()
             },
             onError: { [weak self] message in
                 DispatchQueue.main.async {
@@ -339,7 +380,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
     }
 
     @objc func showPetSettings() {
+        syncSettingsState()
         settingsWindowController.showWindow(nil)
+    }
+
+    @objc func signInWithGoogle() {
+        resourceService.signInWithGoogle(presenting: window) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                switch result {
+                case .success:
+                    self.reloadPetsAfterAuthenticationChange(
+                        successAnnouncement: L10n.text("auth.sign_in.success")
+                    )
+                case .failure(let error):
+                    self.petView.say(error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    @objc func signOut() {
+        resourceService.signOut { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                switch result {
+                case .success:
+                    self.reloadPetsAfterAuthenticationChange(
+                        successAnnouncement: L10n.text("auth.sign_out.success")
+                    )
+                case .failure(let error):
+                    self.petView.say(error.localizedDescription)
+                }
+            }
+        }
     }
 
     @objc func selectPetFromMenu(_ sender: NSMenuItem) {
@@ -373,15 +447,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
     }
 
     private func handleUploadedPet(_ pet: PetMetadata) {
-        availablePets.removeAll { $0.id == pet.id }
-        availablePets.append(pet)
-        availablePets.sort { lhs, rhs in
-            if lhs.isDefault != rhs.isDefault {
-                return lhs.isDefault
-            }
-            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-        }
+        upsertAvailablePet(pet)
         applyActivePet(pet, announcement: nil)
+        syncSettingsState()
 
         resourceService.selectPet(pet) { [weak self] result in
             DispatchQueue.main.async {
@@ -391,6 +459,91 @@ final class AppDelegate: NSObject, NSApplicationDelegate, PetViewDelegate {
                 }
             }
         }
+    }
+
+    private func handleRenamedPet(_ pet: PetMetadata) {
+        upsertAvailablePet(pet)
+        if activePet.id == pet.id {
+            activePet = pet
+        }
+        syncSettingsState()
+    }
+
+    private func handleDeletedPet(_ pet: PetMetadata) {
+        availablePets.removeAll { $0.id == pet.id }
+        guard activePet.id == pet.id else {
+            syncSettingsState()
+            return
+        }
+
+        let fallback = availablePets.first(where: \.isDefault)
+            ?? availablePets.first
+            ?? .defaultSimba
+        applyActivePet(fallback, announcement: nil)
+        syncSettingsState()
+        resourceService.selectPet(fallback) { result in
+            if case .failure(let error) = result {
+                NSLog("Unable to save fallback after deleting pet: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func upsertAvailablePet(_ pet: PetMetadata) {
+        availablePets.removeAll { $0.id == pet.id }
+        availablePets.append(pet)
+        availablePets.sort { lhs, rhs in
+            if lhs.isDefault != rhs.isDefault {
+                return lhs.isDefault
+            }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+    }
+
+    private func syncSettingsState() {
+        settingsWindowController.updateState(
+            accountState: accountState,
+            pets: availablePets,
+            activePetId: activePet.id
+        )
+    }
+
+    private func reloadPetsAfterAuthenticationChange(successAnnouncement: String) {
+        let previousPet = activePet
+        resourceService.authenticateAndLoadPets(
+            onLoaded: { [weak self] selection in
+                guard let self else { return }
+                self.accountState = selection.accountState
+                self.availablePets = selection.pets
+
+                let retainedPet = selection.pets.first {
+                    $0.id == previousPet.id && $0.requiredImagesComplete
+                }
+                let nextPet = retainedPet ?? selection.activePet
+                let lostAccess = retainedPet == nil
+                    && !previousPet.isPublic
+                    && !previousPet.isDefault
+                let announcement = lostAccess
+                    ? L10n.format("auth.pet_fallback", nextPet.name)
+                    : successAnnouncement
+                self.applyActivePet(nextPet, announcement: announcement)
+                self.syncSettingsState()
+
+                if nextPet.id != selection.activePet.id {
+                    self.resourceService.selectPet(nextPet) { result in
+                        if case .failure(let error) = result {
+                            NSLog(
+                                "Unable to preserve active pet after authentication change: \(error.localizedDescription)"
+                            )
+                        }
+                    }
+                }
+            },
+            onError: { [weak self] message in
+                DispatchQueue.main.async {
+                    self?.petView.say(message)
+                }
+            }
+        )
     }
 
     private func requestAction(_ action: PetAction) {

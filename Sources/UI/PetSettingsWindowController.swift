@@ -4,6 +4,8 @@ import UniformTypeIdentifiers
 final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate {
     private let resourceService: FirebasePetResourceService
     private let onUploaded: (PetMetadata) -> Void
+    private let onRenamed: (PetMetadata) -> Void
+    private let onDeleted: (PetMetadata) -> Void
     private let nameField = NSTextField()
     private let statusLabel = NSTextField(labelWithString: "")
     private let uploadButton = NSButton()
@@ -13,15 +15,22 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
     private var resourceStatusIcons: [String: NSImageView] = [:]
     private var selectionButtons: [String: NSButton] = [:]
     private var isUploading = false
+    private var managedPets: [PetMetadata] = []
+    private var activePetId = PetMetadata.defaultSimba.id
+    private var accountState: PetAccountState = .unavailable
 
     init(
         resourceService: FirebasePetResourceService,
-        onUploaded: @escaping (PetMetadata) -> Void
+        onUploaded: @escaping (PetMetadata) -> Void,
+        onRenamed: @escaping (PetMetadata) -> Void,
+        onDeleted: @escaping (PetMetadata) -> Void
     ) {
         self.resourceService = resourceService
         self.onUploaded = onUploaded
+        self.onRenamed = onRenamed
+        self.onDeleted = onDeleted
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 620, height: 570),
+            contentRect: NSRect(x: 0, y: 0, width: 660, height: 720),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -41,6 +50,25 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
         super.showWindow(sender)
         window?.makeKeyAndOrderFront(sender)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func updateState(
+        accountState: PetAccountState,
+        pets: [PetMetadata],
+        activePetId: String
+    ) {
+        let managedPets = Self.sortedManagedPets(from: pets)
+        guard
+            self.accountState != accountState
+                || self.managedPets != managedPets
+                || self.activePetId != activePetId
+        else {
+            return
+        }
+        self.accountState = accountState
+        self.managedPets = managedPets
+        self.activePetId = activePetId
+        window?.contentViewController = makeSettingsViewController()
     }
 
     func controlTextDidChange(_ notification: Notification) {
@@ -79,6 +107,11 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
     }
 
     @objc private func uploadPet() {
+        guard accountState.canUploadPrivatePets else {
+            showStatus(L10n.text("settings.auth_required"), isError: true)
+            return
+        }
+
         let petName: String
         switch PetResourceManifest.validatedPetName(nameField.stringValue) {
         case .success(let name):
@@ -102,14 +135,96 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
                 self.setUploading(false)
                 switch result {
                 case .success(let pet):
+                    self.upsertManagedPet(pet)
+                    self.activePetId = pet.id
+                    self.clearSelectedFiles()
+                    self.window?.contentViewController = self.makeSettingsViewController()
                     self.showStatus(
                         L10n.format("settings.status.upload_complete", pet.name),
                         isError: false
                     )
                     self.onUploaded(pet)
-                    self.clearSelectedFiles()
                 case .failure(let error):
                     self.showStatus(error.localizedDescription, isError: true)
+                }
+            }
+        }
+    }
+
+    @objc private func renamePet(_ sender: NSButton) {
+        guard
+            let pet = managedPet(for: sender),
+            let window
+        else {
+            return
+        }
+
+        let alert = NSAlert()
+        alert.messageText = L10n.format("settings.manage.rename.title", pet.name)
+        alert.informativeText = L10n.text("settings.manage.rename.message")
+        alert.addButton(withTitle: L10n.text("settings.manage.rename"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        let field = NSTextField(string: pet.name)
+        field.frame = NSRect(x: 0, y: 0, width: 300, height: 24)
+        field.selectText(nil)
+        alert.accessoryView = field
+
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn else { return }
+            self.resourceService.renamePet(pet, to: field.stringValue) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let renamedPet):
+                        self.upsertManagedPet(renamedPet)
+                        self.window?.contentViewController = self.makeSettingsViewController()
+                        self.showStatus(
+                            L10n.format("settings.status.rename_complete", renamedPet.name),
+                            isError: false
+                        )
+                        self.onRenamed(renamedPet)
+                    case .failure(let error):
+                        self.showStatus(error.localizedDescription, isError: true)
+                    }
+                }
+            }
+        }
+    }
+
+    @objc private func deletePet(_ sender: NSButton) {
+        guard
+            let pet = managedPet(for: sender),
+            let window
+        else {
+            return
+        }
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = L10n.format("settings.manage.delete.title", pet.name)
+        alert.informativeText = L10n.text("settings.manage.delete.message")
+        alert.addButton(withTitle: L10n.text("settings.manage.delete"))
+        alert.addButton(withTitle: L10n.text("common.cancel"))
+
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn else { return }
+            self.resourceService.deletePet(pet) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        self.managedPets.removeAll { $0.id == pet.id }
+                        if self.activePetId == pet.id {
+                            self.activePetId = PetMetadata.defaultSimba.id
+                        }
+                        self.window?.contentViewController = self.makeSettingsViewController()
+                        self.showStatus(
+                            L10n.format("settings.status.delete_complete", pet.name),
+                            isError: false
+                        )
+                        self.onDeleted(pet)
+                    case .failure(let error):
+                        self.showStatus(error.localizedDescription, isError: true)
+                    }
                 }
             }
         }
@@ -221,12 +336,32 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
     }
 
     private func makeResourcesViewController() -> NSViewController {
+        guard accountState.canUploadPrivatePets else {
+            return makeAuthenticationRequiredViewController()
+        }
+
         let viewController = NSViewController()
         let contentView = NSView()
         viewController.view = contentView
+        resourceStatusLabels.removeAll()
+        resourceStatusIcons.removeAll()
+        selectionButtons.removeAll()
 
         let titleLabel = NSTextField(labelWithString: L10n.text("settings.heading"))
         titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
+
+        let managedPetsLabel = NSTextField(
+            labelWithString: L10n.text("settings.manage.heading")
+        )
+        managedPetsLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+
+        let managedPetsView = makeManagedPetsView()
+
+        let separator = NSBox()
+        separator.boxType = .separator
+
+        let addPetLabel = NSTextField(labelWithString: L10n.text("settings.add.heading"))
+        addPetLabel.font = .systemFont(ofSize: 13, weight: .semibold)
 
         let nameLabel = NSTextField(labelWithString: L10n.text("settings.pet_name.label"))
         nameLabel.font = .systemFont(ofSize: 13, weight: .medium)
@@ -314,6 +449,10 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
 
         let rootStack = NSStackView(views: [
             titleLabel,
+            managedPetsLabel,
+            managedPetsView,
+            separator,
+            addPetLabel,
             nameStack,
             resourcesLabel,
             resourcesStack,
@@ -323,8 +462,11 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
         rootStack.orientation = .vertical
         rootStack.alignment = .leading
         rootStack.spacing = 16
-        rootStack.setCustomSpacing(22, after: titleLabel)
-        rootStack.setCustomSpacing(20, after: nameStack)
+        rootStack.setCustomSpacing(18, after: titleLabel)
+        rootStack.setCustomSpacing(8, after: managedPetsLabel)
+        rootStack.setCustomSpacing(20, after: separator)
+        rootStack.setCustomSpacing(10, after: addPetLabel)
+        rootStack.setCustomSpacing(18, after: nameStack)
         rootStack.setCustomSpacing(10, after: resourcesLabel)
         contentView.addSubview(rootStack)
 
@@ -333,6 +475,8 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
             rootStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
             rootStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 24),
             rootStack.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -24),
+            managedPetsView.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
+            separator.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
             nameStack.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
             resourcesStack.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
             actionStack.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
@@ -340,6 +484,128 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
         ])
 
         updateUploadButton()
+        return viewController
+    }
+
+    private func makeManagedPetsView() -> NSView {
+        guard !managedPets.isEmpty else {
+            let emptyLabel = NSTextField(
+                wrappingLabelWithString: L10n.text("settings.manage.empty")
+            )
+            emptyLabel.textColor = .secondaryLabelColor
+            return emptyLabel
+        }
+
+        let rows = NSStackView()
+        rows.translatesAutoresizingMaskIntoConstraints = false
+        rows.orientation = .vertical
+        rows.alignment = .leading
+        rows.spacing = 6
+
+        for pet in managedPets {
+            let nameLabel = NSTextField(labelWithString: pet.name)
+            nameLabel.lineBreakMode = .byTruncatingTail
+            nameLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+            let stateLabel = NSTextField(
+                labelWithString: pet.id == activePetId
+                    ? L10n.text("settings.manage.current")
+                    : ""
+            )
+            stateLabel.textColor = .secondaryLabelColor
+            stateLabel.font = .systemFont(ofSize: 11)
+
+            let nameStack = NSStackView(views: [nameLabel, stateLabel])
+            nameStack.orientation = .vertical
+            nameStack.alignment = .leading
+            nameStack.spacing = 1
+
+            let renameButton = NSButton(
+                title: L10n.text("settings.manage.rename"),
+                target: self,
+                action: #selector(renamePet(_:))
+            )
+            renameButton.identifier = NSUserInterfaceItemIdentifier(pet.id)
+            renameButton.bezelStyle = .rounded
+
+            let deleteButton = NSButton(
+                title: L10n.text("settings.manage.delete"),
+                target: self,
+                action: #selector(deletePet(_:))
+            )
+            deleteButton.identifier = NSUserInterfaceItemIdentifier(pet.id)
+            deleteButton.bezelStyle = .rounded
+            deleteButton.hasDestructiveAction = true
+
+            let row = NSStackView(views: [nameStack, renameButton, deleteButton])
+            row.orientation = .horizontal
+            row.alignment = .centerY
+            row.spacing = 8
+            rows.addArrangedSubview(row)
+            row.widthAnchor.constraint(equalTo: rows.widthAnchor).isActive = true
+        }
+
+        let scrollView = NSScrollView()
+        scrollView.drawsBackground = false
+        scrollView.hasVerticalScroller = managedPets.count > 3
+        scrollView.autohidesScrollers = true
+        scrollView.documentView = rows
+
+        NSLayoutConstraint.activate([
+            rows.leadingAnchor.constraint(equalTo: scrollView.contentView.leadingAnchor),
+            rows.trailingAnchor.constraint(equalTo: scrollView.contentView.trailingAnchor),
+            rows.topAnchor.constraint(equalTo: scrollView.contentView.topAnchor),
+            rows.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor),
+            scrollView.heightAnchor.constraint(
+                equalToConstant: CGFloat(min(managedPets.count, 3) * 36)
+            )
+        ])
+        return scrollView
+    }
+
+    private func makeAuthenticationRequiredViewController() -> NSViewController {
+        let viewController = NSViewController()
+        let contentView = NSView()
+        viewController.view = contentView
+
+        let imageView = NSImageView(
+            image: NSImage(
+                systemSymbolName: "person.crop.circle.badge.exclamationmark",
+                accessibilityDescription: L10n.text("settings.auth_required.heading")
+            ) ?? NSImage()
+        )
+        imageView.symbolConfiguration = .init(pointSize: 42, weight: .regular)
+        imageView.contentTintColor = .secondaryLabelColor
+
+        let heading = NSTextField(
+            labelWithString: L10n.text("settings.auth_required.heading")
+        )
+        heading.font = .systemFont(ofSize: 20, weight: .semibold)
+
+        let explanationKey = accountState == .unavailable
+            ? "settings.firebase_unavailable"
+            : "settings.auth_required"
+        let explanation = NSTextField(
+            wrappingLabelWithString: L10n.text(explanationKey)
+        )
+        explanation.alignment = .center
+        explanation.textColor = .secondaryLabelColor
+        explanation.maximumNumberOfLines = 0
+
+        let stack = NSStackView(views: [imageView, heading, explanation])
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.orientation = .vertical
+        stack.alignment = .centerX
+        stack.spacing = 14
+        contentView.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: contentView.centerYAnchor, constant: -18),
+            stack.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: 70),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -70),
+            explanation.widthAnchor.constraint(lessThanOrEqualToConstant: 430)
+        ])
         return viewController
     }
 
@@ -354,7 +620,10 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
         let hasAllImages = PetResourceManifest.requiredImageNames.allSatisfy {
             selectedFiles[$0] != nil
         }
-        uploadButton.isEnabled = hasValidName && hasAllImages && !isUploading
+        uploadButton.isEnabled = accountState.canUploadPrivatePets
+            && hasValidName
+            && hasAllImages
+            && !isUploading
     }
 
     private func updateSelectionState(for resourceName: String, fileURL: URL?) {
@@ -407,5 +676,24 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
     private func showStatus(_ message: String, isError: Bool) {
         statusLabel.stringValue = message
         statusLabel.textColor = isError ? .systemRed : .secondaryLabelColor
+    }
+
+    private func managedPet(for sender: NSButton) -> PetMetadata? {
+        guard let petId = sender.identifier?.rawValue else { return nil }
+        return managedPets.first { $0.id == petId }
+    }
+
+    private func upsertManagedPet(_ pet: PetMetadata) {
+        managedPets.removeAll { $0.id == pet.id }
+        managedPets.append(pet)
+        managedPets = Self.sortedManagedPets(from: managedPets)
+    }
+
+    private static func sortedManagedPets(from pets: [PetMetadata]) -> [PetMetadata] {
+        pets
+            .filter { !$0.isDefault && !$0.isPublic && $0.ownerUid != nil }
+            .sorted {
+                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
     }
 }

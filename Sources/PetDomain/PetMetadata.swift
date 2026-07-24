@@ -8,7 +8,8 @@ struct PetMetadata: Equatable {
         ownerUid: nil,
         storagePath: "resources/simba",
         requiredImagesComplete: true,
-        isDefault: true
+        isDefault: true,
+        isPublic: true
     )
 
     let id: String
@@ -18,10 +19,38 @@ struct PetMetadata: Equatable {
     let storagePath: String
     let requiredImagesComplete: Bool
     let isDefault: Bool
+    let isPublic: Bool
+
+    func renamed(to name: String) -> PetMetadata {
+        PetMetadata(
+            id: id,
+            name: name,
+            slug: slug,
+            ownerUid: ownerUid,
+            storagePath: storagePath,
+            requiredImagesComplete: requiredImagesComplete,
+            isDefault: isDefault,
+            isPublic: isPublic
+        )
+    }
 }
 
 struct PetSelectionState {
     let currentUserId: String
     let pets: [PetMetadata]
     let activePet: PetMetadata
+    let accountState: PetAccountState
+}
+
+enum PetAccountState: Equatable {
+    case unavailable
+    case anonymous
+    case google(displayName: String?, email: String?)
+
+    var canUploadPrivatePets: Bool {
+        if case .google = self {
+            return true
+        }
+        return false
+    }
 }

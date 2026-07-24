@@ -5,7 +5,8 @@ enum PetMenuBuilder {
         target: AnyObject,
         walkEnabled: Bool,
         pets: [PetMetadata],
-        activePetId: String
+        activePetId: String,
+        accountState: PetAccountState
     ) -> NSMenu {
         let menu = NSMenu()
         addMenuItem(L10n.text("menu.action.normal"), action: #selector(AppDelegate.setNormal), target: target, to: menu)
@@ -29,8 +30,50 @@ enum PetMenuBuilder {
             to: menu
         )
         menu.addItem(.separator())
+        addAccountItems(accountState, target: target, to: menu)
+        menu.addItem(.separator())
         addMenuItem(L10n.text("menu.quit"), action: #selector(AppDelegate.quit), target: target, to: menu)
         return menu
+    }
+
+    private static func addAccountItems(
+        _ accountState: PetAccountState,
+        target: AnyObject,
+        to menu: NSMenu
+    ) {
+        switch accountState {
+        case .anonymous:
+            let loginMenu = NSMenu()
+            addMenuItem(
+                L10n.text("menu.account.provider.google"),
+                action: #selector(AppDelegate.signInWithGoogle),
+                target: target,
+                to: loginMenu
+            )
+            let loginItem = NSMenuItem(
+                title: L10n.text("menu.account.login"),
+                action: nil,
+                keyEquivalent: ""
+            )
+            loginItem.submenu = loginMenu
+            menu.addItem(loginItem)
+        case .google(let displayName, let email):
+            let identity = displayName?.nilIfEmpty ?? email?.nilIfEmpty
+            let title = identity.map {
+                L10n.format("menu.account.signed_in_as", $0)
+            } ?? L10n.text("menu.account.signed_in")
+            let accountItem = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            accountItem.isEnabled = false
+            menu.addItem(accountItem)
+            addMenuItem(
+                L10n.text("menu.account.sign_out"),
+                action: #selector(AppDelegate.signOut),
+                target: target,
+                to: menu
+            )
+        case .unavailable:
+            break
+        }
     }
 
     private static func addPetSelectionItems(
@@ -70,5 +113,11 @@ enum PetMenuBuilder {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = target
         menu.addItem(item)
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
     }
 }

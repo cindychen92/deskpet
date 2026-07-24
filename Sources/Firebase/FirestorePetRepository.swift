@@ -10,29 +10,38 @@ final class FirestorePetRepository {
 
     func loadPets(
         forUserId userId: String,
+        includeOwnedPets: Bool,
         completion: @escaping (Result<([PetMetadata], String?), Error>) -> Void
     ) {
-        var loadedPets: [PetMetadata]?
+        var loadedPets: [PetMetadata] = []
         var activePetId: String?
         var firstError: Error?
         let lock = NSLock()
         let group = DispatchGroup()
 
-        group.enter()
-        database.collection("pets")
-            .getDocuments { snapshot, error in
-                defer { group.leave() }
-                if let error {
+        func loadPets(matching field: String, value: Any) {
+            group.enter()
+            database.collection("pets")
+                .whereField(field, isEqualTo: value)
+                .getDocuments { snapshot, error in
+                    defer { group.leave() }
+                    if let error {
+                        lock.lock()
+                        firstError = firstError ?? error
+                        lock.unlock()
+                        return
+                    }
+                    let pets = snapshot?.documents.compactMap(Self.makePetMetadata) ?? []
                     lock.lock()
-                    firstError = firstError ?? error
+                    loadedPets.append(contentsOf: pets)
                     lock.unlock()
-                    return
                 }
-                let pets = snapshot?.documents.compactMap(Self.makePetMetadata) ?? []
-                lock.lock()
-                loadedPets = pets
-                lock.unlock()
-            }
+        }
+
+        loadPets(matching: "isPublic", value: true)
+        if includeOwnedPets {
+            loadPets(matching: "ownerUid", value: userId)
+        }
 
         group.enter()
         database.collection("users").document(userId).getDocument { snapshot, error in
@@ -49,7 +58,7 @@ final class FirestorePetRepository {
         }
 
         group.notify(queue: .main) {
-            let pets = Self.deduplicate(loadedPets ?? [])
+            let pets = Self.deduplicate(loadedPets)
             if let firstError, pets.isEmpty {
                 completion(.failure(firstError))
                 return
@@ -106,6 +115,7 @@ final class FirestorePetRepository {
                 "storagePath": pet.storagePath,
                 "requiredImagesComplete": true,
                 "isDefault": false,
+                "isPublic": false,
                 "updatedAt": FieldValue.serverTimestamp()
             ]
 
@@ -120,6 +130,44 @@ final class FirestorePetRepository {
                     } else {
                         completion(.success(()))
                     }
+                }
+            }
+        }
+    }
+
+    func renamePet(
+        _ petId: String,
+        to name: String,
+        forUserId userId: String,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        database.collection("pets").document(petId).updateData(
+            [
+                "name": name,
+                "updatedAt": FieldValue.serverTimestamp()
+            ]
+        ) { error in
+            DispatchQueue.main.async {
+                if let error {
+                    completion(.failure(error))
+                } else {
+                    completion(.success(()))
+                }
+            }
+        }
+    }
+
+    func deletePet(
+        _ petId: String,
+        forUserId userId: String,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        database.collection("pets").document(petId).delete { error in
+            DispatchQueue.main.async {
+                if let error {
+                    completion(.failure(error))
+                } else {
+                    completion(.success(()))
                 }
             }
         }
@@ -145,7 +193,8 @@ final class FirestorePetRepository {
             ownerUid: data["ownerUid"] as? String,
             storagePath: storagePath,
             requiredImagesComplete: data["requiredImagesComplete"] as? Bool ?? false,
-            isDefault: data["isDefault"] as? Bool ?? false
+            isDefault: data["isDefault"] as? Bool ?? false,
+            isPublic: data["isPublic"] as? Bool ?? false
         )
     }
 
