@@ -30,7 +30,7 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
         window.title = L10n.text("settings.window.title")
         window.isReleasedWhenClosed = false
         window.center()
-        window.contentViewController = makeContentViewController()
+        window.contentViewController = makeSettingsViewController()
     }
 
     required init?(coder: NSCoder) {
@@ -115,7 +115,112 @@ final class PetSettingsWindowController: NSWindowController, NSTextFieldDelegate
         }
     }
 
-    private func makeContentViewController() -> NSViewController {
+    @objc private func selectLanguage(_ sender: NSPopUpButton) {
+        guard
+            let value = sender.selectedItem?.representedObject as? String,
+            let language = AppLanguage(rawValue: value)
+        else {
+            return
+        }
+
+        AppLanguagePreference.current = language
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.window?.title = L10n.text("settings.window.title")
+            self.window?.contentViewController = self.makeSettingsViewController(
+                selectedTabIndex: 1
+            )
+        }
+    }
+
+    private func makeSettingsViewController(selectedTabIndex: Int = 0) -> NSViewController {
+        let tabViewController = NSTabViewController()
+        tabViewController.tabStyle = .toolbar
+
+        let resourcesTab = NSTabViewItem(viewController: makeResourcesViewController())
+        resourcesTab.label = L10n.text("settings.tab.resources")
+        resourcesTab.image = NSImage(
+            systemSymbolName: "photo.on.rectangle",
+            accessibilityDescription: resourcesTab.label
+        )
+        tabViewController.addTabViewItem(resourcesTab)
+
+        let languageTab = NSTabViewItem(viewController: makeLanguageViewController())
+        languageTab.label = L10n.text("settings.tab.language")
+        languageTab.image = NSImage(
+            systemSymbolName: "globe",
+            accessibilityDescription: languageTab.label
+        )
+        tabViewController.addTabViewItem(languageTab)
+
+        tabViewController.selectedTabViewItemIndex = selectedTabIndex
+        return tabViewController
+    }
+
+    private func makeLanguageViewController() -> NSViewController {
+        let viewController = NSViewController()
+        let contentView = NSView()
+        viewController.view = contentView
+
+        let titleLabel = NSTextField(labelWithString: L10n.text("language.heading"))
+        titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
+
+        let descriptionLabel = NSTextField(
+            wrappingLabelWithString: L10n.text("language.description")
+        )
+        descriptionLabel.textColor = .secondaryLabelColor
+
+        let languageLabel = NSTextField(labelWithString: L10n.text("language.label"))
+        languageLabel.font = .systemFont(ofSize: 13, weight: .medium)
+
+        let languagePopUp = NSPopUpButton()
+        for language in AppLanguage.allCases {
+            languagePopUp.addItem(withTitle: language.displayName)
+            languagePopUp.lastItem?.representedObject = language.rawValue
+        }
+        languagePopUp.selectItem(
+            withTitle: AppLanguagePreference.current.displayName
+        )
+        languagePopUp.target = self
+        languagePopUp.action = #selector(selectLanguage(_:))
+
+        let languageStack = NSStackView(views: [languageLabel, languagePopUp])
+        languageStack.orientation = .horizontal
+        languageStack.alignment = .centerY
+        languageStack.spacing = 14
+        languageLabel.setContentHuggingPriority(.required, for: .horizontal)
+
+        let appliedLabel = NSTextField(
+            wrappingLabelWithString: L10n.text("language.applied_immediately")
+        )
+        appliedLabel.textColor = .secondaryLabelColor
+
+        let rootStack = NSStackView(views: [
+            titleLabel,
+            descriptionLabel,
+            languageStack,
+            appliedLabel
+        ])
+        rootStack.translatesAutoresizingMaskIntoConstraints = false
+        rootStack.orientation = .vertical
+        rootStack.alignment = .leading
+        rootStack.spacing = 16
+        rootStack.setCustomSpacing(10, after: titleLabel)
+        rootStack.setCustomSpacing(24, after: descriptionLabel)
+        contentView.addSubview(rootStack)
+
+        NSLayoutConstraint.activate([
+            rootStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+            rootStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            rootStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 24),
+            languageStack.widthAnchor.constraint(equalTo: rootStack.widthAnchor),
+            languagePopUp.widthAnchor.constraint(greaterThanOrEqualToConstant: 220)
+        ])
+
+        return viewController
+    }
+
+    private func makeResourcesViewController() -> NSViewController {
         let viewController = NSViewController()
         let contentView = NSView()
         viewController.view = contentView
